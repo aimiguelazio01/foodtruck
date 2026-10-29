@@ -1,0 +1,2 @@
+import {openDatabase} from '../lib/database.mjs';import {mkdirSync} from 'node:fs';import {resolve,join} from 'node:path';
+const directory=resolve('data/backups');mkdirSync(directory,{recursive:true});const target=join(directory,'foodtruck-'+new Date().toISOString().replaceAll(':','-')+'.sqlite');const db=openDatabase();try{db.prepare('VACUUM INTO ?').run(target);console.log(target);}finally{db.close();}

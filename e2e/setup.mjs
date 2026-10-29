@@ -1,0 +1,2 @@
+import {existsSync,unlinkSync} from 'node:fs';import {spawnSync} from 'node:child_process';import path from 'node:path';
+export default function setup(){const file=path.resolve('data/e2e.sqlite');for(const suffix of ['','-wal','-shm'])if(existsSync(file+suffix))unlinkSync(file+suffix);const result=spawnSync(process.execPath,['scripts/seed.mjs'],{env:{...process.env,DATABASE_PATH:file,NODE_ENV:'test'},stdio:'inherit'});if(result.status!==0)throw new Error('E2E seed failed');}

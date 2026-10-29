@@ -1,0 +1,9 @@
+node_modules
+.next
+.git
+.env*
+data
+.npm-cache
+test-results
+playwright-report
+public/images/food-atlas.png

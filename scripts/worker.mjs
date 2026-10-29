@@ -1,0 +1,3 @@
+import {openDatabase} from '../lib/database.mjs';import {authSchema} from '../lib/auth.mjs';import {orderSchema} from '../lib/orders.mjs';import {runJobs} from '../lib/jobs.mjs';
+function tick(){const db=openDatabase();try{authSchema(db);orderSchema(db);runJobs(db);console.log(new Date().toISOString()+' jobs complete');}catch(e){console.error('Background jobs failed:',e.message);process.exitCode=1;}finally{db.close();}}
+tick();if(!process.argv.includes('--once')){const timer=setInterval(tick,60000);for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>{clearInterval(timer);process.exit();});}

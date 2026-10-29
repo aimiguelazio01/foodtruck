@@ -1,0 +1,22 @@
+services:
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      DEMO_MODE: "0"
+    volumes:
+      - foodtruck_data:/app/data
+    restart: unless-stopped
+  worker:
+    build: .
+    command: ["node", "scripts/worker.mjs"]
+    volumes:
+      - foodtruck_data:/app/data
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  foodtruck_data:

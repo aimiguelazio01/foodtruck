@@ -1,0 +1,2 @@
+'use client';
+export default function ErrorPage({reset}:{reset:()=>void}){return <main className="tracking"><article className="panel"><p className="eyebrow">VAMOS TENTAR NOVAMENTE</p><h1>Não foi possível carregar esta página.</h1><p className="muted">Verifique a ligação e volte a tentar. Se enviou uma encomenda, confirme o acompanhamento antes de fazer um novo pedido.</p><button className="primary" onClick={reset}>Tentar novamente</button><p style={{marginTop:20}}><a href="/">Voltar ao início →</a></p></article></main>}
