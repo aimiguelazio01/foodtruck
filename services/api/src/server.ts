@@ -1,4 +1,5 @@
 import {orderManagementRoutes} from './order-management.js';
+import {publicLocationRoutes} from './public-locations.js';
 import {tick} from './maintenance.js';
 import {eventGeocodingRoutes} from './event-geocoding.js';
 import {eventRoutes} from './events.js';
@@ -20,6 +21,7 @@ import {managementRoutes} from "./management.js";
 import {networkRoutes} from "./network.js";
 import {operationsRoutes} from "./operations.js";
 const app=Fastify({logger:{redact:["req.headers.authorization","req.url"]}});await registerContract(app);app.addHook("onRequest",authenticate);
+await publicLocationRoutes(app);
 app.addHook("onRequest",async(req,reply)=>{const origin=req.headers.origin;if(origin&&(process.env.CORS_ORIGINS||"http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001").split(",").includes(origin)){reply.header("Access-Control-Allow-Origin",origin).header("Access-Control-Allow-Credentials","true").header("Vary","Origin").header("Access-Control-Allow-Headers","authorization,content-type").header("Access-Control-Allow-Methods","GET,POST,PATCH,DELETE,OPTIONS");}if(origin&&!["GET","HEAD","OPTIONS"].includes(req.method)&&!(process.env.CORS_ORIGINS||"http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001").split(",").includes(origin))return reply.code(403).send({error:"Origin not allowed"});if(req.method==="OPTIONS")return reply.code(204).send();});
 app.addHook("preHandler",async(req,reply)=>{if(req.method!=="POST")return;const path=req.url.split("?")[0];let limit=0;if(path.endsWith("/orders"))limit=30;else if(["/api/v1/customer/register","/api/v1/customer/forgot-password","/api/v1/customer/login","/api/v1/customer/reset-password","/api/v1/customer/resend-verification"].includes(path))limit=10;if(!limit)return;const now=Date.now(),key=`api:${req.ip}:${path}`;const result=await pool.query("INSERT INTO request_limits(key,count,expires) VALUES($1,1,$2) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN request_limits.expires<=$3 THEN 1 ELSE request_limits.count+1 END,expires=CASE WHEN request_limits.expires<=$3 THEN $2 ELSE request_limits.expires END RETURNING count",[key,now+900000,now]);if(result.rows[0].count>limit)return reply.code(429).send({error:"Too many requests"});});app.get("/api/v1/health",async()=>{await pool.query("SELECT 1");return {ok:true};});
 app.post("/api/v1/auth/login",async (req,reply)=>{const b=req.body as any;const result=await login(b?.email,b?.password);reply.header("Set-Cookie",`staff_session=${result.token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=28800${process.env.NODE_ENV==="production"?"; Secure":""}`);return {user:result.user};});
