@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "fastify",
-  "buildCommand": "npm run build"
+  "version": 2,
+  "builds": [{"src": "api/index.ts", "use": "@vercel/node"}],
+  "routes": [{"src": "/(.*)", "dest": "/api/index.ts"}]
 }
