@@ -1,0 +1,5 @@
+# Imagem da sobremesa
+
+Ferramenta: gerador integrado de imagens. transparent_background=true.
+
+Use case: product-mockup. Asset type: individual dessert menu product image, PNG with genuine alpha transparency. Subject: one portion of classic Italian tiramisu in a small clear square takeaway dessert cup without lid, showing distinct layers of coffee-soaked sponge fingers and ivory mascarpone cream, evenly dusted with fine cocoa powder. No fruit, no chocolate bar, no garnish, no spoon. Photorealistic appetizing professional food photography, three-quarter view, entire cup fully visible, centered, generous margin for square composition, soft studio lighting, realistic cream and cocoa detail. Completely TRANSPARENT BACKGROUND, isolated object. No backdrop, no floor, no surface, no background shadow, no fake checkerboard, no words, no label, no logo, no people. Consistent clean commercial catalog style.

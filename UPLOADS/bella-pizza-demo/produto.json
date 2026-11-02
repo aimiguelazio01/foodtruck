@@ -1,0 +1,19 @@
+{
+  "purpose": "Referência para introdução manual na demo; não é uma importação automática.",
+  "product": {
+    "name": "Tiramisù da Casa",
+    "business": "Bella Pizza Mobile",
+    "category": "Sobremesas",
+    "description": "Camadas de palitos la reine embebidos em café, creme suave de mascarpone e uma cobertura delicada de cacau. Um clássico italiano servido em dose individual.",
+    "ingredients": "Mascarpone, palitos la reine (farinha de trigo, açúcar e ovo), natas, café, açúcar e cacau em pó. Receita sem adição de álcool.",
+    "allergens": "Leite, ovo e glúten (trigo).",
+    "price_eur": 4.5,
+    "price_cents": 450,
+    "portion": "1 copo individual · cerca de 150 g",
+    "prep_minutes": 1,
+    "tags": "Sobremesa italiana, café, sem adição de álcool",
+    "available": 1,
+    "image": "imagens/tiramisu-da-casa.png",
+    "image_webp": "imagens/tiramisu-da-casa.webp"
+  }
+}

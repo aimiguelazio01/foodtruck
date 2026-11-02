@@ -28,9 +28,13 @@ Use the three fictional logins to inspect every management section. Test denied 
 
 ## Performance
 
-The image atlas uses one optimized WebP for thirty dish views, avoiding unstable hotlinks and repeated transfers. Map code loads dynamically, large static images are locally cached, and private pages remain dynamic. Record browser timing conditions when measuring performance; local timings are not mobile-network field measurements. No unsupported Lighthouse or real-world Core Web Vitals score is claimed.
+The menu uses thirty individual transparent WebP images, with lazy loading and no unstable image hotlinks. Map code loads dynamically, large static images are locally cached, and private pages remain dynamic. Record browser timing conditions when measuring performance; local timings are not mobile-network field measurements. No unsupported Lighthouse or real-world Core Web Vitals score is claimed.
 
 
 
 ## Final local viewport and timing check
 The production storefront was checked at 320, 375, 768 and 1440 CSS pixels; none had horizontal overflow. One local Chromium navigation measured DOMContentLoaded at 193 ms and load at 284 ms. These are warm local-host observations, not throttled-mobile LCP/INP measurements or field Core Web Vitals. Actual storefront/dashboard screenshots are saved under docs/screenshots/.
+
+
+## Product image update
+All 30 new files were checked for alpha transparency and at least 900 pixels in each dimension. The three storefronts each loaded ten images without broken references in the production browser. Chromium and Firefox targeted mobile accessibility/offline and uploaded-image scenarios passed (4 tests).

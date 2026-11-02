@@ -1,3 +1,5 @@
+> Current connected-app architecture and run instructions: [CONNECTED_APPS.md](CONNECTED_APPS.md). The material below records the original single-app release.
+
 # Final implementation report
 
 ## Delivered application

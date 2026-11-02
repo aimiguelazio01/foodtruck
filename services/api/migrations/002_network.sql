@@ -1,0 +1,12 @@
+CREATE TABLE organizations (id text PRIMARY KEY, name text NOT NULL);
+CREATE TABLE organization_members (organization_id text NOT NULL REFERENCES organizations(id), user_id text NOT NULL REFERENCES users(id), role text NOT NULL CHECK(role IN ('network_owner','network_admin')), PRIMARY KEY(organization_id,user_id));
+CREATE TABLE organization_trucks (organization_id text NOT NULL REFERENCES organizations(id), business_id text NOT NULL UNIQUE REFERENCES businesses(id), archived boolean NOT NULL DEFAULT false, PRIMARY KEY(organization_id,business_id));
+CREATE TABLE network_availability (id text PRIMARY KEY, organization_id text NOT NULL REFERENCES organizations(id), user_id text NOT NULL REFERENCES users(id), starts_at timestamptz NOT NULL, ends_at timestamptz NOT NULL CHECK(ends_at>starts_at));
+CREATE TABLE network_shifts (id text PRIMARY KEY, organization_id text NOT NULL REFERENCES organizations(id), business_id text NOT NULL REFERENCES businesses(id), user_id text NOT NULL REFERENCES users(id), starts_at timestamptz NOT NULL, ends_at timestamptz NOT NULL CHECK(ends_at>starts_at));
+CREATE INDEX network_shifts_overlap ON network_shifts(organization_id,user_id,starts_at,ends_at);
+CREATE TABLE network_templates (id text PRIMARY KEY, organization_id text NOT NULL REFERENCES organizations(id), name text NOT NULL);
+CREATE TABLE network_template_versions (template_id text NOT NULL REFERENCES network_templates(id), version integer NOT NULL, definition jsonb NOT NULL, PRIMARY KEY(template_id,version));
+CREATE TABLE network_transfers (id text PRIMARY KEY, organization_id text NOT NULL REFERENCES organizations(id), source_id text NOT NULL REFERENCES businesses(id), destination_id text NOT NULL REFERENCES businesses(id), status text NOT NULL CHECK(status IN ('draft','dispatched','received','cancelled')), CHECK(source_id<>destination_id));
+CREATE TABLE network_transfer_items (transfer_id text NOT NULL REFERENCES network_transfers(id), source_inventory_id text NOT NULL REFERENCES inventory(id), destination_inventory_id text NOT NULL REFERENCES inventory(id), quantity integer NOT NULL CHECK(quantity>0), PRIMARY KEY(transfer_id,source_inventory_id,destination_inventory_id));
+CREATE TABLE network_transfer_ledger (transfer_id text NOT NULL REFERENCES network_transfers(id), inventory_id text NOT NULL REFERENCES inventory(id), phase text NOT NULL CHECK(phase IN ('dispatch','receive')), delta integer NOT NULL, PRIMARY KEY(transfer_id,inventory_id,phase));
+

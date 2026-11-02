@@ -1,0 +1,5 @@
+import {randomBytes,randomUUID,scryptSync} from 'node:crypto';
+import {pool} from '../src/db.js';
+const [email,name='Food Truck Network']=process.argv.slice(2);const password=process.env.FOODTRUCK_ADMIN_PASSWORD;
+if(!email||!/^\S+@\S+\.\S+$/.test(email)||!password||password.length<12||password.length>256)throw new Error('Provide email and optional organization name; set FOODTRUCK_ADMIN_PASSWORD (12–256 characters).');
+const c=await pool.connect();try{await c.query('BEGIN');const uid=randomUUID(),org=randomUUID(),salt=randomBytes(16).toString('hex');await c.query('INSERT INTO users VALUES($1,$2,$3)',[uid,email.trim().toLowerCase(),salt+':'+scryptSync(password,salt,64).toString('hex')]);await c.query('INSERT INTO organizations VALUES($1,$2)',[org,name]);await c.query("INSERT INTO organization_members VALUES($1,$2,'network_owner')",[org,uid]);await c.query('COMMIT');console.log('Network and owner created. Sign in to management to add trucks.');}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();await pool.end();}

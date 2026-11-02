@@ -1,0 +1,31 @@
+{
+  "name": "@foodtruck/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/services/api/src/server.js",
+    "build": "tsc -p tsconfig.build.json",
+    "migrate": "tsx scripts/migrate.ts",
+    "import:sqlite": "tsx scripts/import-sqlite.ts",
+    "typecheck": "tsc --noEmit",
+    "worker": "tsx src/worker.ts",
+    "validate": "tsx scripts/validate.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1161.0",
+    "@fastify/swagger": "^9.9.2",
+    "@types/nodemailer": "^8.0.2",
+    "exceljs": "^4.4.0",
+    "fastify": "^5.0.0",
+    "nodemailer": "^10.3.1",
+    "pg": "^8.13.0",
+    "sharp": "^0.35.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.0.0"
+  }
+}

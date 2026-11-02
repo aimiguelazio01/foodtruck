@@ -30,3 +30,10 @@
 .food-photo{background-size:500% 660%}.add-button:disabled{width:auto;min-width:0;max-width:100%;font-size:10px;padding:8px;height:auto;line-height:1.3}button,a,input,select{transition:background-color .15s,color .15s,box-shadow .15s}@media(prefers-reduced-motion:reduce){button,a,input,select{transition:none}}
 
 .location-panel .map-frame{height:140px;margin-bottom:15px}.map-overview{border-radius:8px;overflow:hidden}
+/* Product photographs retain their intrinsic proportions and transparent edges. */
+.food-photo{display:flex;align-items:center;justify-content:center;overflow:hidden;background-image:none;background-color:#f1eee5;aspect-ratio:1.3}
+.food-photo img{display:block;width:100%;height:100%;object-fit:contain;object-position:center;padding:6%;}
+.food-photo-empty{color:#65705b;font-size:12px}
+.hero-food .food-photo{background-color:#ede9dd}
+.hero-food .food-photo img{padding:7%}
+.dark .food-photo{background-color:#34412d}

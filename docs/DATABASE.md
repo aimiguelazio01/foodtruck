@@ -1,3 +1,5 @@
+> Current connected-app architecture and run instructions: [CONNECTED_APPS.md](CONNECTED_APPS.md). The material below records the original single-app release.
+
 # Database
 
 The active database is SQLite at `DATABASE_PATH` (default `data/foodtruck.sqlite`). Setup is idempotent. The base schema is initialized by `openDatabase`; authentication and operational additions are applied by `authSchema` and `orderSchema`/`operationsSchema`. Additive columns are checked before applying updates. Back up before upgrading. There is no dependency on the old PostgreSQL draft.

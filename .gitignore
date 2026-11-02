@@ -10,3 +10,8 @@ data/
 .npm-cache/
 test-results/
 playwright-report/
+tmp/
+**/dist/
+*.tsbuildinfo
+.vercel/
+!.env.network.example

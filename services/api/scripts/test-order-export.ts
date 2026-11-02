@@ -1,0 +1,41 @@
+import assert from 'node:assert/strict';
+import {readFile,readdir,writeFile} from 'node:fs/promises';
+import {randomBytes,randomUUID} from 'node:crypto';
+import pg from 'pg';import Fastify from 'fastify';import ExcelJS from 'exceljs';
+import {groupOrders,matchingOrders} from '../../../apps/management/lib/order-view.js';
+const admin=new pg.Pool({connectionString:process.env.DATABASE_URL}),schema='test_order_export_'+randomBytes(6).toString('hex');await admin.query('CREATE SCHEMA "'+schema+'"');
+const url=new URL(process.env.DATABASE_URL!);url.searchParams.set('options','-c search_path='+schema);process.env.DATABASE_URL=url.href;
+const {pool}=await import('../src/db.js');const {orderManagementRoutes}=await import('../src/order-management.js');
+const app=Fastify();app.decorateRequest('user',null);app.addHook('onRequest',async req=>{const user=String(req.headers['x-user']||'owner');req.user=user==='anonymous'?null:{id:user,email:user+'@test.test'}});await orderManagementRoutes(app);
+const request=(path:string,user='owner')=>app.inject({method:'GET',url:'/api/v1/manage/businesses/'+path,headers:{'x-user':user}});
+const first=randomUUID(),second=randomUUID(),other=randomUUID(),when=Date.UTC(2027,6,4,23,30);
+try{
+ for(const file of (await readdir(new URL('../migrations/',import.meta.url))).filter(n=>n.endsWith('.sql')).sort())await pool.query(await readFile(new URL('../migrations/'+file,import.meta.url),'utf8'));
+ await pool.query("INSERT INTO businesses VALUES('b','truck','Carrinha Teste','#112233'),('other','other','Other','#112233'),('empty','empty','Empty','#112233');INSERT INTO users VALUES('owner','owner@test.test','x'),('staff','staff@test.test','x'),('denied','denied@test.test','x');INSERT INTO memberships VALUES('owner','b','owner'),('owner','empty','owner'),('staff','b','staff'),('denied','b','manager');INSERT INTO membership_permissions(user_id,business_id,permissions) VALUES('staff','b','{\"orders\":true}'),('denied','b','{\"menus\":true}')");
+ await pool.query("INSERT INTO events(id,business_id,title,address,starts_at,ends_at,venue_name,latitude,longitude) VALUES('event1','b','Festival','Morada do evento',$1,$2,'Praça',38.7,-9.1),('event2','b','Festival','Outra morada',$3,$4,'Jardim',38.8,-9.2)",[when-3600000,when+3600000,when+86400000,when+2*86400000]);
+ await pool.query("INSERT INTO orders(id,business_id,request_hash,customer_name,contact,total_cents,status,created_at,pickup_at,event_id,location_snapshot) VALUES($1,'b','DO_NOT_EXPORT_REQUEST_HASH_1','=1+1','CONTACTO_PRIVADO',1550,'ready',$4,$4,'event1','Morada de recolha'),($2,'b','DO_NOT_EXPORT_REQUEST_HASH_2','João','OTHER_CONTACT',300,'cancelled',$4,NULL,'event2','Jardim'),($3,'other','DO_NOT_EXPORT_REQUEST_HASH_3','SEGREDO_OUTRA_CARRINHA','NO_EXPORT',900,'pending',$4,$4,NULL,'Rua')",[first,second,other,when]);
+ await pool.query("INSERT INTO order_items(order_id,product_id,name,quantity,unit_cents,customization,category) VALUES($1,'p','Hotdog',2,600,'Cheddar + bacon','Hotdogs'),($1,'drink','Limonada',1,350,'Sem gelo','Bebidas'),($2,'p2','Água',2,150,'','Bebidas'),($3,'secret','ARTIGO_OUTRA_CARRINHA',1,900,'','Menu')",[first,second,other]);
+ await pool.query("INSERT INTO audit_events VALUES('audit1','b','owner',$1,$2),('audit2','b','staff',$3,$2)",['order:'+first+':ready',when,'payment:'+first+':collection']);
+ let r=await request('b/orders');assert.equal(r.statusCode,200,r.body);const orders=r.json().orders;assert.equal(orders.length,2);assert.equal(orders[0].items.length+orders[1].items.length,3);assert.ok(orders.every((o:any)=>o.event_title==='Festival'));assert.ok(orders.every((o:any)=>!('request_hash' in o)));
+ assert.equal(groupOrders(orders,'event').length,2,'same event names stay separate by ID');assert.equal(groupOrders(orders,'day')[0].title.includes('05'),true,'Lisbon midnight grouping');
+ assert.equal(groupOrders(orders,'none').length,1);
+ assert.equal(matchingOrders(orders,'joao','all').length,1);assert.equal(matchingOrders(orders,'bacon','active').length,1);assert.equal(matchingOrders(orders,'','cancelled').length,1);assert.equal(matchingOrders(orders,'','all').length,2);
+ const staffOrders=(await request('b/orders','staff')).json().orders;assert.ok(staffOrders.every((o:any)=>!('contact' in o)));
+ assert.equal((await request('b/orders/export.xlsx','anonymous')).statusCode,401);assert.equal((await request('b/orders/export.xlsx','denied')).statusCode,403);assert.equal((await request('other/orders/export.xlsx')).statusCode,403);
+ r=await request('b/orders/export.xlsx');assert.equal(r.statusCode,200);assert.match(r.headers['content-type'] as string,/spreadsheetml/);assert.match(r.headers['content-disposition'] as string,/\.xlsx/);assert.equal(r.rawPayload.subarray(0,2).toString(),'PK');
+ const book=new ExcelJS.Workbook();await book.xlsx.load(r.rawPayload as any);assert.deepEqual(book.worksheets.map(s=>s.name),['Encomendas','Artigos','Histórico']);
+ const sheet=book.getWorksheet('Encomendas')!,items=book.getWorksheet('Artigos')!,history=book.getWorksheet('Histórico')!;
+ assert.equal(sheet.rowCount,6);assert.equal(items.rowCount,7);assert.equal(history.rowCount,6);assert.equal(sheet.views[0].state,'frozen');
+ const headers=sheet.getRow(4).values as any[];const firstRow=[sheet.getRow(5),sheet.getRow(6)].find(row=>row.getCell(2).value===first)!;
+ assert.equal(firstRow.getCell(headers.indexOf('Cliente')).value,'=1+1');assert.equal(firstRow.getCell(headers.indexOf('Cliente')).type,ExcelJS.ValueType.String);
+ assert.equal(firstRow.getCell(headers.indexOf('Total (EUR)')).value,15.5);assert.equal(firstRow.getCell(headers.indexOf('Recolha (Portugal)')).value instanceof Date,true);
+ assert.equal((firstRow.getCell(headers.indexOf('Recolha (Portugal)')).value as Date).toISOString(),'2027-07-05T00:30:00.000Z');
+ assert.equal(firstRow.getCell(headers.indexOf('Contacto')).value,'CONTACTO_PRIVADO');assert.match(firstRow.getCell(headers.indexOf('Total (EUR)')).numFmt,/€/);
+ let subtotal=0;for(let index=5;index<=items.rowCount;index++)subtotal+=Number(items.getRow(index).getCell(12).result);
+ assert.equal(subtotal,18.5);assert.ok(JSON.stringify(book.model).includes('Cheddar + bacon'));assert.ok(!JSON.stringify(book.model).includes('DO_NOT_EXPORT'));assert.ok(!JSON.stringify(book.model).includes('SEGREDO_OUTRA_CARRINHA'));
+ await writeFile('tmp/orders-export-verification.xlsx',r.rawPayload);
+ const staff=await request('b/orders/export.xlsx','staff'),staffBook=new ExcelJS.Workbook();await staffBook.xlsx.load(staff.rawPayload as any);assert.ok(!JSON.stringify(staffBook.model).includes('CONTACTO_PRIVADO'));assert.ok(JSON.stringify(staffBook.model).includes('Reservado pelas permissões'));
+ const empty=await request('empty/orders/export.xlsx'),emptyBook=new ExcelJS.Workbook();assert.equal(empty.statusCode,200);await emptyBook.xlsx.load(empty.rawPayload as any);assert.equal(emptyBook.getWorksheet('Encomendas')!.rowCount,4);
+ console.log('PASS: list data and item/event enrichment; day/event grouping and status/search filters; native XLSX sheets, numeric amounts, dates, formulas, totals, audit and empty export; formula-like names remain text; contact redaction, tenant isolation, authentication and export permissions.');
+}finally{await app.close();await pool.end();await admin.query('DROP SCHEMA "'+schema+'" CASCADE');await admin.end();}
+

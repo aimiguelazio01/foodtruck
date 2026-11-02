@@ -1,0 +1,26 @@
+{$CUSTOMER_DOMAIN} {
+  handle /api/v1/* {
+    reverse_proxy api:4000 { 
+      flush_interval -1
+    }
+  }
+  handle /uploads/* {
+    reverse_proxy api:4000
+  }
+  handle { 
+    reverse_proxy customer:3000
+  }
+}
+{$MANAGEMENT_DOMAIN} {
+  handle /api/v1/* {
+    reverse_proxy api:4000 {
+      flush_interval -1
+    }
+  }
+  handle /uploads/* {
+    reverse_proxy api:4000
+  }
+  handle {
+    reverse_proxy management:3001
+  }
+}

@@ -6,4 +6,8 @@ data
 .npm-cache
 test-results
 playwright-report
+tmp
+output
 public/images/food-atlas.png
+**/.next
+**/node_modules

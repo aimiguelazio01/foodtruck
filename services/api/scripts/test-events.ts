@@ -1,0 +1,72 @@
+import assert from 'node:assert/strict';
+import {readFile,readdir} from 'node:fs/promises';
+import {randomBytes} from 'node:crypto';
+import pg from 'pg';
+import Fastify from 'fastify';
+
+import {mapsCoordinates,eventTimestamp,localDateInput} from '../../../apps/management/lib/event-form.js';
+const admin=new pg.Pool({connectionString:process.env.DATABASE_URL});
+const schema='test_events_'+randomBytes(6).toString('hex');await admin.query('CREATE SCHEMA "'+schema+'"');
+const url=new URL(process.env.DATABASE_URL!);url.searchParams.set('options','-c search_path='+schema);process.env.DATABASE_URL=url.toString();
+const {pool}=await import('../src/db.js');const {createGeocoder,eventGeocodingRoutes}=await import('../src/event-geocoding.js');const {eventRoutes}=await import('../src/events.js');
+const {recurringRoutes}=await import('../src/recurring.js');
+const app=Fastify();app.decorateRequest('user',null);app.addHook('onRequest',async req=>{const id=String(req.headers['x-user']||'owner');req.user=id==='anonymous'?null:{id,email:id+'@test.test'};});await eventRoutes(app);await recurringRoutes(app);await eventGeocodingRoutes(app,async()=>[{address:'Rua de Teste, Lisboa',latitude:38.7,longitude:-9.1}]);
+const request=(method:any,business:string,path='',payload?:any,user='owner')=>app.inject({method,url:'/api/v1/manage/businesses/'+business+'/events'+path,payload,headers:{'x-user':user}});
+const start=Date.UTC(2027,1,15,12),end=start+7200000;
+const body={title:'Feira da Rua',venue_name:'Jardim',address:'Praça de Lisboa',starts_at:start,ends_at:end,is_public:0,type:'market',latitude:38.7223,longitude:-9.1393};
+try{
+ for(const file of (await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort())await pool.query(await readFile(new URL('../migrations/'+file,import.meta.url),'utf8'));
+ await pool.query("INSERT INTO businesses VALUES('a','a','A','#112233'),('b','b','B','#112233');INSERT INTO business_settings(business_id) VALUES('a'),('b');INSERT INTO users VALUES('owner','owner@test.test','x'),('limited','limited@test.test','x');INSERT INTO memberships VALUES('owner','a','owner'),('owner','b','owner'),('limited','a','staff');INSERT INTO membership_permissions(user_id,business_id,permissions) VALUES('limited','a','{\"calendar\":true}');INSERT INTO organizations VALUES('org','Org');INSERT INTO organization_trucks VALUES('org','a',false),('org','b',false)");
+ let r=await request('POST','a','',body,'limited');assert.equal(r.statusCode,200,r.body);const id=r.json().id;
+ let event=(await request('GET','a')).json().events[0];assert.equal(event.venue_name,'Jardim');assert.equal(event.latitude,38.7223);assert.equal(event.is_public,0);
+ assert.equal((await request('POST','b','',body,'limited')).statusCode,403);
+ assert.equal((await request('POST','a','',body,'anonymous')).statusCode,401);
+ assert.equal((await request('POST','a','',{...body,starts_at:start+1,ends_at:end+1})).statusCode,409);
+ assert.equal((await request('POST','b','',{...body,ends_at:start})).statusCode,400);
+ for(const bad of [{latitude:91},{longitude:181},{longitude:null},{is_public:2},{title:' '},{address:'',latitude:null,longitude:null}])assert.equal((await request('POST','b','',{...body,...bad})).statusCode,400);
+ r=await request('PATCH','a','/'+id,{version:event.version,is_public:1});assert.equal(r.statusCode,200,r.body);
+ assert.equal((await pool.query('SELECT count(*)::int n FROM events WHERE business_id=$1 AND is_public=1',['a'])).rows[0].n,1);
+ assert.equal((await request('PATCH','a','/'+id,{version:event.version,title:'Stale'})).statusCode,409);
+ event=(await request('GET','a')).json().events[0];
+ assert.equal((await request('PATCH','a','/'+id,{version:event.version,business_id:'b'},'limited')).statusCode,403);
+ r=await request('PATCH','a','/'+id,{version:event.version,business_id:'b'});assert.equal(r.statusCode,200,r.body);assert.equal((await request('GET','a')).json().events.length,0);
+ event=(await request('GET','b')).json().events[0];
+ await pool.query("INSERT INTO orders(id,business_id,request_hash,customer_name,contact,total_cents,status,created_at,pickup_at,event_id) VALUES('order','b','hash','Customer','12345',500,'pending',$1,$2,$3)",[Date.now(),start+1800000,id]);
+ assert.equal((await request('PATCH','b','/'+id,{version:event.version,address:'Outra morada'})).statusCode,409);
+ assert.equal((await request('PATCH','b','/'+id,{version:event.version,is_public:0})).statusCode,409);
+ r=await request('PATCH','b','/'+id,{version:event.version,title:'Título corrigido'});assert.equal(r.statusCode,200,r.body);
+ event=(await request('GET','b')).json().events[0];
+ assert.equal((await request('PATCH','b','/'+id,{version:event.version,business_id:'a'})).statusCode,409);
+ await pool.query("UPDATE organization_trucks SET archived=true WHERE business_id='a'");
+ assert.equal((await request('POST','a','',{...body,starts_at:start+86400000,ends_at:end+86400000})).statusCode,409);
+ await pool.query("UPDATE organization_trucks SET archived=false WHERE business_id='a'");
+ r=await request('POST','a','/recurring',{title:'Semanal',address:'Rua',starts_at:'2027-03-01T12:00:00Z',ends_at:'2027-03-01T14:00:00Z',repeat_weeks:2});assert.equal(r.statusCode,200,r.body);assert.equal(r.json().ids.length,2);
+ assert.deepEqual(mapsCoordinates('38.7223, -9.1393'),[38.7223,-9.1393]);
+ assert.deepEqual(mapsCoordinates('https://www.google.com/maps?q=38.7223,-9.1393'),[38.7223,-9.1393]);
+ assert.deepEqual(mapsCoordinates('https://www.google.com/maps/@1,2,16z/data=!3d38.7223!4d-9.1393'),[38.7223,-9.1393]);
+ assert.throws(()=>mapsCoordinates('91, 0'));assert.throws(()=>mapsCoordinates('https://maps.app.goo.gl/example'));
+ assert.equal(eventTimestamp('2027-01-15T12:00'),Date.UTC(2027,0,15,12));
+ assert.equal(eventTimestamp('2027-07-15T12:00'),Date.UTC(2027,6,15,11));
+ assert.equal(localDateInput(Date.UTC(2027,6,15,11)),'2027-07-15T12:00');
+ assert.throws(()=>eventTimestamp('2027-03-28T01:30'));
+
+ r=await request('POST','a','',{...body,title:'Coordenadas apenas',address:'',starts_at:start+2*86400000,ends_at:end+2*86400000});assert.equal(r.statusCode,200,r.body);
+ const coordsOnly=(await pool.query('SELECT address,latitude FROM events WHERE id=$1',[r.json().id])).rows[0];assert.equal(coordsOnly.address,'');assert.equal(coordsOnly.latitude,38.7223);
+ r=await request('GET','a','/location/search?q=Lisboa',undefined,'limited');assert.equal(r.statusCode,200,r.body);assert.equal(r.json().locations[0].address,'Rua de Teste, Lisboa');
+ assert.equal((await request('GET','b','/location/search?q=Lisboa',undefined,'limited')).statusCode,403);
+ assert.equal((await request('GET','a','/location/reverse?lat=91&lon=0')).statusCode,400);
+ assert.equal((await request('GET','a','/location/reverse?lat=0')).statusCode,400);
+ assert.equal((await request('GET','a','/location/search?q=ab')).statusCode,400);
+ r=await request('GET','a','/location/reverse?lat=38.7&lon=-9.1');assert.equal(r.statusCode,200,r.body);
+ let fetched=0;
+ const geocoder=createGeocoder(async(_url,options)=>{fetched++;assert.ok(options.signal);return new Response(JSON.stringify({features:[{properties:{street:'Rua Teste',housenumber:'2',postcode:'1000',city:'Lisboa',country:'Portugal'},geometry:{coordinates:[-9.1,38.7]}},{properties:{name:'Invalid'},geometry:{coordinates:[999,999]}}]}),{status:200});});
+ const [first,second]=await Promise.all([geocoder('reverse',{lat:'38.7',lon:'-9.1'}),geocoder('reverse',{lat:'38.7',lon:'-9.1'})]);
+ assert.equal(fetched,1);assert.deepEqual(first,second);assert.equal(first[0].address,'Rua Teste 2, 1000 Lisboa, Portugal');assert.equal(first.length,1);
+ await geocoder('reverse',{lat:'38.7',lon:'-9.1'});assert.equal(fetched,1,'cached lookup');
+ const unavailable=createGeocoder(async()=>new Response('unavailable',{status:503}));
+ await assert.rejects(unavailable('search',{q:'Lisboa'}),/temporariamente indisponível/);
+ console.log('PASS: coordinates-only event; geocoding input validation and permission isolation; normalized addresses; invalid results ignored; concurrent requests deduplicated and cached; provider outage handled.');
+ console.log('PASS: event creation/editing and truck selection; publication; location coordinates; access isolation; overlaps; stale edits; active-order protection; recurrence compatibility; Google Maps parsing; Portugal winter/summer and missing-hour handling.');
+}finally{await app.close();await pool.end();await admin.query('DROP SCHEMA "'+schema+'" CASCADE');await admin.end();}
+
+

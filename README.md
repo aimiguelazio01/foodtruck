@@ -1,3 +1,5 @@
+> Connected application setup: see [docs/CONNECTED_APPS.md](docs/CONNECTED_APPS.md). For Vercel, see [docs/VERCEL.md](docs/VERCEL.md): deploy `apps/customer` and `apps/management`, with a separately hosted API. Customer app runs on port 3000; management on 3001; PostgreSQL API on 4000. The instructions below describe the original single-app release.
+
 # Food Truck Live
 
 A Portuguese (Portugal) food-truck management and guest-ordering web application, using Next.js, React, TypeScript and persistent SQLite. Includes three fictional businesses, owner/manager/staff accounts, digital menus, a cart with extras and sizes, pickup scheduling, protected tracking, kitchen operations, inventory, calendar, locations, customer tools, branding and reports.

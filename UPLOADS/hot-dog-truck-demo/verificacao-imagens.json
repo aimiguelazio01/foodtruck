@@ -1,0 +1,102 @@
+[
+  {
+    "image": "imagens/01-classico.png",
+    "width": 1024,
+    "height": 1024,
+    "hasAlpha": true,
+    "alphaMin": 0,
+    "alphaMax": 255,
+    "pngBytes": 1497357,
+    "webpBytes": 279774
+  },
+  {
+    "image": "imagens/02-cheddar-bacon.png",
+    "width": 1024,
+    "height": 1024,
+    "hasAlpha": true,
+    "alphaMin": 0,
+    "alphaMax": 255,
+    "pngBytes": 1602323,
+    "webpBytes": 303952
+  },
+  {
+    "image": "imagens/03-picante.png",
+    "width": 1024,
+    "height": 1024,
+    "hasAlpha": true,
+    "alphaMin": 0,
+    "alphaMax": 255,
+    "pngBytes": 1428869,
+    "webpBytes": 252978
+  },
+  {
+    "image": "imagens/04-bbq.png",
+    "width": 1024,
+    "height": 1024,
+    "hasAlpha": true,
+    "alphaMin": 0,
+    "alphaMax": 255,
+    "pngBytes": 1369064,
+    "webpBytes": 254362
+  },
+  {
+    "image": "imagens/05-portugues.png",
+    "width": 1024,
+    "height": 1024,
+    "hasAlpha": true,
+    "alphaMin": 0,
+    "alphaMax": 255,
+    "pngBytes": 1444248,
+    "webpBytes": 243048
+  },
+  {
+    "image": "imagens/06-vegetariano.png",
+    "width": 1024,
+    "height": 1024,
+    "hasAlpha": true,
+    "alphaMin": 0,
+    "alphaMax": 255,
+    "pngBytes": 1555371,
+    "webpBytes": 277110
+  },
+  {
+    "image": "imagens/07-limonada.png",
+    "width": 1024,
+    "height": 1024,
+    "hasAlpha": true,
+    "alphaMin": 0,
+    "alphaMax": 255,
+    "pngBytes": 1278951,
+    "webpBytes": 229402
+  },
+  {
+    "image": "imagens/08-cha-pessego.png",
+    "width": 1024,
+    "height": 1024,
+    "hasAlpha": true,
+    "alphaMin": 0,
+    "alphaMax": 255,
+    "pngBytes": 1301452,
+    "webpBytes": 260056
+  },
+  {
+    "image": "imagens/09-cola.png",
+    "width": 1024,
+    "height": 1024,
+    "hasAlpha": true,
+    "alphaMin": 0,
+    "alphaMax": 255,
+    "pngBytes": 1385913,
+    "webpBytes": 321952
+  },
+  {
+    "image": "imagens/10-agua.png",
+    "width": 1024,
+    "height": 1024,
+    "hasAlpha": true,
+    "alphaMin": 0,
+    "alphaMax": 255,
+    "pngBytes": 858374,
+    "webpBytes": 182090
+  }
+]

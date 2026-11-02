@@ -1,0 +1,17 @@
+import EmbeddedPostgres from 'embedded-postgres';
+import {existsSync,mkdirSync,writeFileSync,readFileSync} from 'node:fs';
+import {randomBytes} from 'node:crypto';
+mkdirSync('data',{recursive:true});
+const secretFile='data/local-pg-secret';
+if(!existsSync(secretFile))writeFileSync(secretFile,randomBytes(24).toString('hex'));
+const password=readFileSync(secretFile,'utf8');
+const port=Number(process.env.LOCAL_PG_PORT||5433);
+const pg=new EmbeddedPostgres({databaseDir:'data/postgres',user:'foodtruck',password,port,persistent:true,postgresFlags:['-h','127.0.0.1'],onLog:()=>{},onError:console.error});
+if(!existsSync('data/postgres/PG_VERSION'))await pg.initialise();
+await pg.start();
+const client=pg.getPgClient();await client.connect();
+if(!(await client.query("SELECT 1 FROM pg_database WHERE datname='foodtruck'")).rowCount)await client.query('CREATE DATABASE foodtruck');
+await client.end();
+writeFileSync('data/network.env',`DATABASE_URL=postgres://foodtruck:${password}@127.0.0.1:${port}/foodtruck\n`);
+console.log(`PostgreSQL ready on 127.0.0.1:${port}; credentials stored privately in data/network.env`);
+let stopping=false;const stop=async()=>{if(stopping)return;stopping=true;await pg.stop();process.exit(0);};process.on('SIGINT',stop);process.on('SIGTERM',stop);setInterval(()=>{},60000);

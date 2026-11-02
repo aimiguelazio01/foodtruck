@@ -1,0 +1,1 @@
+export function trackingCookie(cookie:string|undefined,id:string){const prefix=`ft_track_${id}=`;const pair=cookie?.split(';').map(x=>x.trim()).find(x=>x.startsWith(prefix));const token=pair?.slice(prefix.length);return token&&/^[a-f0-9]{64}$/.test(token)?token:undefined;}
