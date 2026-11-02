@@ -1,6 +1,7 @@
 # Publicação gratuita atualmente configurada
 
 - Clientes: https://foodtruck-swart.vercel.app (`apps/customer`).
+- Gestão: https://foodtruck-management.vercel.app (`apps/management`).
 - API: https://foodtruck-api.vercel.app (`services/api`).
 - PostgreSQL e imagens privadas: projeto Supabase `yyzyjscbeurqvkulnepl`, plano Free.
 - Não foi criado nenhum serviço pago no Render. O Render bloqueou a criação gratuita por exigir dados de pagamento; a API foi alojada no Vercel.
