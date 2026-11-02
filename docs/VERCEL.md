@@ -4,6 +4,8 @@ A aplicação atual tem dois frontends Next.js e uma API Fastify com PostgreSQL.
 
 ## Preparar o servidor
 
+Para usar o Render, seguir [RENDER.md](RENDER.md). O Blueprint `render.yaml` e o `Dockerfile.api` já preparam a API, o worker, o PostgreSQL e o disco de imagens.
+
 A API precisa de um serviço Node.js persistente, do worker de manutenção e de uma base PostgreSQL. O Vercel dos frontends não inicia `scripts/dev-network.mjs` nem os serviços locais do computador.
 
 O modelo de alojamento completo existente está em `compose.network.yaml`; ver [CONNECTED_APPS.md](CONNECTED_APPS.md). Configurar armazenamento persistente para uploads ou S3, aplicar as migrações e criar o administrador antes de publicar. Os dados locais e os uploads da base em `data/` não são enviados pelo Git; devem ser migrados separadamente para o alojamento escolhido.

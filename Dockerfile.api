@@ -1,0 +1,13 @@
+FROM node:24-bookworm-slim
+WORKDIR /workspace
+COPY package.json package-lock.json ./
+COPY apps/customer/package.json ./apps/customer/package.json
+COPY apps/management/package.json ./apps/management/package.json
+COPY packages ./packages
+COPY services/api ./services/api
+RUN npm ci --no-audit --no-fund
+RUN npm run build --workspace=@foodtruck/api
+COPY scripts/render-start.mjs ./scripts/render-start.mjs
+ENV NODE_ENV=production HOST=0.0.0.0 DATA_DIRECTORY=/var/data
+EXPOSE 4000
+CMD ["node", "scripts/render-start.mjs", "api"]
