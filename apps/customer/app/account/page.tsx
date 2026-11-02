@@ -39,10 +39,11 @@ export default function Account(){
   return()=>{active=false;controller.abort();};
  },[customer?.id,pending,claimAttempt]);
  async function submit(e:React.FormEvent<HTMLFormElement>){
-  e.preventDefault();const f=new FormData(e.currentTarget);setMessage('');setError('');setBusy(true);
-  try{const r=await fetch('/api/v1/customer/'+mode,{method:'POST',credentials:'include',headers:{'content-type':'application/json'},body:JSON.stringify({email:f.get('email'),password:f.get('password')})});const d=await r.json();
-   if(!r.ok){const text=d.message||d.error;throw Error(text==='Invalid credentials'?'Email ou palavra-passe da conta de cliente incorretos.':text==='Verify your email first'?'Confirme o seu email antes de entrar na conta.':text||'Não foi possível continuar.');}
-   if(mode==='register'){setMessage('Verifique o seu email para ativar a conta. Depois entre para associar a encomenda.');setMode('login');}
+  e.preventDefault();const f=new FormData(e.currentTarget);const resend=(e.nativeEvent as SubmitEvent).submitter instanceof HTMLButtonElement&&(e.nativeEvent as SubmitEvent).submitter?.getAttribute('value')==='resend';if(resend){const email=e.currentTarget.elements.namedItem('email') as HTMLInputElement;if(!email.reportValidity())return;}setMessage('');setError('');setBusy(true);
+  try{const r=await fetch('/api/v1/customer/'+(resend?'resend-verification':mode),{method:'POST',credentials:'include',headers:{'content-type':'application/json'},body:JSON.stringify({email:f.get('email'),password:f.get('password')})});const d=await r.json();
+   if(!r.ok){const text=d.message||d.error;throw Error(text==='Invalid credentials'?'Email ou palavra-passe da conta de cliente incorretos.':text==='Account already exists'?'Esta conta já existe. Entre na conta ou use «Reenviar confirmação» se ainda não a confirmou.':text==='Verify your email first'?'Confirme o seu email antes de entrar. Pode pedir um novo email no botão «Reenviar confirmação».':text||'Não foi possível continuar.');}
+   if(resend){setMessage('Se existir uma conta por confirmar, foi pedido um novo email de confirmação. Verifique também a pasta de spam.');}
+   else if(mode==='register'){setMessage('Verifique o seu email para ativar a conta. Depois entre para associar a encomenda.');setMode('login');}
    else{setCustomer(d.customer);window.dispatchEvent(new Event('customer-session-changed'));}
   }catch(e){setError(e instanceof Error?e.message:'Não foi possível continuar.');}finally{setBusy(false);}
  }
@@ -54,7 +55,7 @@ export default function Account(){
  if(!customer)return <main className="auth-page"><section className="auth-story"><AppBrand/><h1>Os seus favoritos.<br/>Sempre consigo.</h1><p>Guarde o número da encomenda e acompanhe o estado até à recolha.</p></section><section className="auth-form-wrap"><div><h1>{mode==='login'?'Entrar na conta de cliente':'Criar conta de cliente'}</h1>
   {pending&&<p className="notice">Entre ou crie uma conta de cliente para associar a encomenda {orderNumber(pending)}. A sessão da equipa é independente da conta de cliente.</p>}
   {message&&<p className="notice" role="status">{message}</p>}{error&&<p className="notice error" role="alert">{error}</p>}
-  <form onSubmit={submit} className="edit-form"><label>Email<input name="email" type="email" autoComplete="email" required maxLength={254} disabled={busy}/></label><label>Palavra-passe<input name="password" type="password" minLength={12} maxLength={256} autoComplete={mode==='login'?'current-password':'new-password'} required disabled={busy}/></label><button className="primary checkout-button" disabled={busy}>{busy?'A processar…':mode==='login'?'Entrar →':'Criar conta →'}</button></form>
+  <form onSubmit={submit} className="edit-form"><label>Email<input name="email" type="email" autoComplete="email" required maxLength={254} disabled={busy}/></label><label>Palavra-passe<input name="password" type="password" minLength={12} maxLength={256} autoComplete={mode==='login'?'current-password':'new-password'} required disabled={busy}/></label><button className="primary checkout-button" disabled={busy}>{busy?'A processar…':mode==='login'?'Entrar →':'Criar conta →'}</button>{mode==='login'&&<button type="submit" name="intent" value="resend" formNoValidate disabled={busy}>Reenviar confirmação</button>}</form>
   <button className="quiet" disabled={busy} onClick={()=>{setMode(mode==='login'?'register':'login');setMessage('');setError('')}}>{mode==='login'?'Criar uma conta':'Já tenho conta'}</button>
   <p><a href="/forgot-password">Recuperar palavra-passe</a></p><p><a href={pending?'/track/'+encodeURIComponent(pending):'/'}>{pending?'Voltar à encomenda':'Voltar aos menus'}</a></p>
  </div></section></main>;
