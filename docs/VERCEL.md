@@ -40,3 +40,8 @@ Os ficheiros `vercel.json` dentro de cada aplicação fixam o framework Next.js,
 Abrir `/api/v1/health` através de cada domínio frontend, carregar o catálogo e uma imagem de upload, iniciar sessão e confirmar as atualizações de encomendas. Consultar os Runtime Logs do Vercel para exceções do servidor; uma resposta HTTP 200 da página pode ainda conter a interface de erro do Next.js.
 
 Referência: https://vercel.com/docs/monorepos
+
+## Instalação atual
+
+A API já está alojada gratuitamente no Vercel, com PostgreSQL e imagens no Supabase. Ver [FREE_HOSTING.md](FREE_HOSTING.md) para os endereços e detalhes atuais. O Render é uma alternativa e não é necessário nesta instalação.
+
