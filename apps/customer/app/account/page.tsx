@@ -69,7 +69,7 @@ export default function Account(){
    <p className="order-business">{order.business_name}</p><dl className="order-pickup"><div><dt>Recolha — hora de Portugal</dt><dd>{pickupTime(order.pickup_at)}</dd></div>{order.location_snapshot&&<div><dt>Local de recolha</dt><dd>{order.location_snapshot}</dd></div>}</dl>
    {order.status==='ready'&&<p className="notice">Pronta para recolha. Indique o número {orderNumber(order.id)} à equipa.</p>}
    <ul>{(order.items||[]).map((item:any,index:number)=><li key={index}>{item.quantity} × {item.name}</li>)}</ul>
-   <div className="order-account-actions"><strong>{orderMoney(order.total_cents)}</strong><a className="primary link-button" href={'/track/'+encodeURIComponent(order.id)}>Acompanhar encomenda {orderNumber(order.id)}</a></div>
+   <div className="order-account-actions"><strong>{orderMoney(order.total_cents)}</strong>{order.status!=='collected'&&<a className="primary link-button" href={'/track/'+encodeURIComponent(order.id)}>Acompanhar encomenda {orderNumber(order.id)}</a>}</div>
   </article>)}</div>:<p>Ainda não há encomendas associadas a esta conta. Na página de acompanhamento do pedido, escolha Associar à minha conta.</p>}
   <p><a href="/">Voltar aos menus</a></p>
  </section></main>;
