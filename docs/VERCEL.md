@@ -31,6 +31,12 @@ Não usar `http://localhost:4000` no Vercel: esse endereço refere-se ao própri
 
 ## Verificar a publicação
 
+### Erro NEXT_NO_ROUTES_MANIFEST
+
+Se o erro procurar `/vercel/path0/.next/routes-manifest.json`, confirmar em Settings → Build and Deployment que Root Directory está em `apps/customer` (clientes) ou `apps/management` (gestão). A compilação na raiz executa os vários workspaces, mas não gera um manifesto `.next` na raiz.
+
+Os ficheiros `vercel.json` dentro de cada aplicação fixam o framework Next.js, o comando `npm run build` e o output `.next`, relativo à Root Directory. Desativar overrides antigos do painel que usem comandos da raiz, `public` ou `out`. Confirmar também que não foi definido um caminho personalizado para o ficheiro de configuração. Fazer um novo deploy da branch `master`, sem reutilizar a cache de build anterior. Não copiar manualmente manifests entre projetos.
+
 Abrir `/api/v1/health` através de cada domínio frontend, carregar o catálogo e uma imagem de upload, iniciar sessão e confirmar as atualizações de encomendas. Consultar os Runtime Logs do Vercel para exceções do servidor; uma resposta HTTP 200 da página pode ainda conter a interface de erro do Next.js.
 
 Referência: https://vercel.com/docs/monorepos
