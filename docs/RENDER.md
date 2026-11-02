@@ -1,28 +1,21 @@
-# API e PostgreSQL no Render
+# Alojamento gratuito: Render + Supabase
 
-O ficheiro `render.yaml` prepara três recursos pagos na região Frankfurt: API, worker e PostgreSQL, com disco persistente de 1 GB para imagens. Rever o orçamento apresentado pelo Render antes de aplicar o Blueprint. Estes ficheiros não ativam serviços por si só.
+`render.yaml` configura uma única API no plano **free**, sem discos, base Render ou worker pagos. PostgreSQL e imagens ficam no Supabase Free. Não aplicar versões antigas deste Blueprint, que continham recursos pagos.
 
-1. No Render, escolher **New → Blueprint**, ligar o repositório `aimiguelazio01/foodtruck` e usar a branch `master`.
-2. Rever os recursos e custos. Preencher `MANAGEMENT_APP_URL` com a URL final da gestão e `CORS_ORIGINS` com as URLs de clientes e gestão separadas por vírgula, sem espaços nem barras finais.
-3. Após autorizar a criação, aguardar o health check `/api/v1/health`. As migrações são executadas automaticamente, com bloqueio entre API e worker.
-4. Copiar a URL HTTPS efetivamente atribuída à API para `INTERNAL_API_URL` dos dois projetos Vercel. A URL da API não deve ser presumida a partir do nome do serviço.
-5. Seguir [VERCEL.md](VERCEL.md) e fazer novo deploy dos dois frontends.
+- API: `npm ci --include=dev --no-audit --no-fund && npm run build --workspace=@foodtruck/api`.
+- Arranque: `node scripts/render-start.mjs api`.
+- `RUN_MAINTENANCE=1` executa a manutenção dentro da API enquanto está ativa. Durante suspensão do Render não há manutenção periódica; retoma ao arrancar.
+- `DATABASE_URL`: pooler **session mode**, porta 5432, utilizador exclusivo da aplicação, TLS `sslmode=verify-full`. O modo transaction não suporta o LISTEN/NOTIFY usado pela aplicação.
+- `NODE_EXTRA_CA_CERTS=services/api/certs/supabase.crt`: certificado público oficial Supabase para verificar TLS, também utilizado nas migrações.
+- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET=foodtruck-media`: armazenamento persistente num bucket privado. A chave de servidor fica apenas na API; nunca no browser ou no Git.
+- `CUSTOMER_APP_URL`, `MANAGEMENT_APP_URL`, `CORS_ORIGINS`: URLs reais dos frontends.
 
-## Primeira conta e dados
+O esquema `foodtruck` fica separado das tabelas públicas do Supabase e sem acesso para anon/authenticated. As contas continuam a ser geridas pela API existente; não são contas Supabase Auth.
 
-A base nasce vazia. Para uma instalação nova, no Shell da API, executar a partir de `/workspace/services/api`:
+As migrações são automáticas e usam advisory lock. Para transferir a instalação local, copiar os dados na ordem das dependências e enviar as imagens de `data/uploads` para o bucket mantendo os nomes. Preservar os conteúdos manuais de `UPLOADS`.
 
-```sh
-read -s -p 'Password inicial: ' FOODTRUCK_ADMIN_PASSWORD
-export FOODTRUCK_ADMIN_PASSWORD
-node ../../node_modules/tsx/dist/cli.mjs scripts/create-network-admin.ts owner@example.com "Food Truck Live"
-unset FOODTRUCK_ADMIN_PASSWORD
-```
+O Render Free suspende a API após 15 minutos sem tráfego. O primeiro acesso pode demorar. Supabase Free pode pausar o projeto após inatividade e tem limites de armazenamento e tráfego. SMTP externo não está configurado: recuperação e verificação continuam no outbox privado; em armazenamento efémero não se deve contar com retenção desses ficheiros entre reinícios.
 
-Usar o email e o nome reais pretendidos. O comando cria o administrador; não gera encomendas nem menus de demonstração.
+Depois de a API responder em `/api/v1/health`, definir `INTERNAL_API_URL` nos projetos Vercel e voltar a publicar. Ver [VERCEL.md](VERCEL.md).
 
-Para preservar os negócios locais existentes, migrar uma cópia de PostgreSQL e as imagens de `data/uploads` para a base e o disco remotos. Não executar a criação de administrador como substituto da migração. Os conteúdos da pasta `UPLOADS` destinados à introdução manual continuam guardados no GitHub.
-
-Não há envio de email externo configurado por este Blueprint. Configurar SMTP_URL/MAIL_FROM quando necessário; sem SMTP, a recuperação e verificação são guardadas no outbox privado da API. O worker usa a mesma base, mas não precisa do disco de imagens.
-
-Referências: https://render.com/docs/blueprint-spec e https://render.com/docs/disks
+Referências: https://render.com/docs/free e https://supabase.com/pricing

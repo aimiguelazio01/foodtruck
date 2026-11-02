@@ -14,4 +14,5 @@ tmp/
 **/dist/
 *.tsbuildinfo
 .vercel/
+supabase/.temp/
 !.env.network.example
