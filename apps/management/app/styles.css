@@ -79,3 +79,6 @@
 
 .orders-workspace .badge{font-size:12px;line-height:1.4;padding:5px 8px}
 @media(max-width:650px){.orders-table td:nth-child(2){grid-column:1/-1}}
+
+.auth-story .auth-truck-image{display:block;width:100%;max-width:560px;height:280px;object-fit:contain;object-position:left center;margin-top:25px;flex-shrink:0}
+@media(max-width:600px){.auth-story .auth-truck-image{height:190px;max-width:360px;margin-top:12px;align-self:center;object-position:center}}

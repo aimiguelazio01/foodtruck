@@ -1,0 +1,8 @@
+Food Truck Live — imagem da página de gestão
+
+Gerada com a ferramenta integrada imagegen, com fundo transparente (canal alfa).
+
+Prompt: Uma carrinha de street food Food Truck Live, vista a três quartos, laranja com tejadilho creme e detalhes escuros, janela de atendimento aberta e iluminação acolhedora. Hot dog, fatia de pizza e bebida no balcão. Ilustração 3D realista, carrinha completa, sem pessoas, cenário ou chão. Texto na lateral: FOOD TRUCK LIVE. Fundo verdadeiramente transparente.
+
+Original: food-truck-live-hero-transparente.png
+Versão otimizada da aplicação: apps/management/public/images/food-truck-live-hero.webp
