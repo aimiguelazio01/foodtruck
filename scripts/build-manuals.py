@@ -60,7 +60,7 @@ def build(source,filename,title,subtitle):
  lines=source.read_text(encoding='utf-8-sig').splitlines();story=[]
  white=ParagraphStyle('cover',fontName='FTBold',fontSize=40,leading=47,textColor=colors.white,spaceAfter=25)
  light=ParagraphStyle('covertext',fontName='FT',fontSize=13,leading=20,textColor=colors.HexColor('#d9e2d2'))
- story += [Spacer(1,45),Paragraph('Food Truck Live',ParagraphStyle('brand',parent=light,fontName='FTBold',fontSize=18)),Spacer(1,37),Paragraph(title,white),Paragraph(subtitle,light),Spacer(1,28),Paragraph('Guia prático | 3 de novembro de 2026',light)]
+ story += [Spacer(1,45),Paragraph('Food Truck Live',ParagraphStyle('brand',parent=light,fontName='FTBold',fontSize=18)),Spacer(1,37),Paragraph(title,white),Paragraph(subtitle,light),Spacer(1,28),Paragraph('Guia ilustrado | 3 de novembro de 2026',light)]
  truck=ROOT/'apps/management/public/images/food-truck-live-hero.webp'
  if truck.exists():
   from PIL import Image as PILImage
@@ -76,6 +76,19 @@ def build(source,filename,title,subtitle):
    story.append(PageBreak());p=Paragraph(markup(line[3:]),styles['h']);p.is_chapter=True;story.append(p);first=False;i+=1;continue
   if first:i+=1;continue
   if not line:i+=1;continue
+  figure=re.fullmatch(r'!\[(.*?)\]\((.*?)\)',line)
+  if figure:
+   from PIL import Image as PILImage
+   caption,relative=figure.groups();path=(source.parent/relative).resolve()
+   if not path.is_file():raise RuntimeError('Missing manual screenshot: '+str(path))
+   with PILImage.open(path) as im:iw,ih=im.size
+   scale=min(505.28/iw,390/ih);pic=Image(str(path),width=iw*scale,height=ih*scale);pic.hAlign='LEFT'
+   elements=[Spacer(1,12),pic,Spacer(1,8),Paragraph(markup(caption),styles['small'])]
+   following=i+1
+   while following<len(lines) and not lines[following].strip():following+=1
+   if following<len(lines) and lines[following].strip().startswith('Fonte: '):
+    elements.append(Paragraph(markup(lines[following]),styles['small']));i=following
+   story.append(KeepTogether(elements));i+=1;continue
   if line.startswith('```'):
    code=[];i+=1
    while i<len(lines) and not lines[i].strip().startswith('```'):code.append(lines[i]);i+=1

@@ -1,5 +1,5 @@
 # Manual de instalação e alojamento
-Food Truck Live | Edição de 3 de novembro de 2026
+Food Truck Live | Edição ilustrada de 3 de novembro de 2026
 
 Guia para uma instalação nova, manutenção e migração. Inclui GitHub, PostgreSQL/Supabase, email Brevo ou SMTP, Vercel, Cloudflare e servidor Node.js/Docker. Os comandos partem da raiz do projeto salvo indicação em contrário. Valores example.com são exemplos a substituir.
 
@@ -13,6 +13,8 @@ O Food Truck Live precisa de dois sites Next.js, uma API Node.js, PostgreSQL, ar
 | D - Node.js genérico | Sites e API em processos Node.js; PostgreSQL gerido ou próprio; proxy HTTPS e armazenamento escolhido. |
 
 Cloudflare e Supabase não são substitutos diretos: Cloudflare pode alojar os sites e proteger domínios; Supabase fornece PostgreSQL e armazenamento. Podem ser usados em conjunto. Carregar ficheiros num alojamento estático/PHP ou criar só uma base não instala esta aplicação.
+
+As capturas desta edição foram recolhidas em 3 de novembro de 2026. Mostram a aplicação real ou exemplos publicados pelos fornecedores, identificados nas legendas. O aspeto pode variar com a versão e o tamanho do ecrã.
 
 ## 2. Compatibilidade e limites
 Requisitos de referência: Node.js 24, npm com workspaces e PostgreSQL. A instalação de referência usa PostgreSQL 17; o ambiente local também usa 18. Noutras versões, valide migrações e testes numa base separada.
@@ -62,6 +64,10 @@ Com ZIP, extraia para uma pasta sua, abra o terminal nessa pasta e execute npm c
 
 install:init cria .env.install apenas se ainda não existir. Edite esse ficheiro com os seus valores e guarde. Não o publique. Depois execute npm run install:check. O diagnóstico de configuração não cria base, compra serviços ou publica a aplicação.
 
+![Figura 1. Repositório real no GitHub, menu Code aberto: copiar a ligação ou escolher Download ZIP.](images/instalacao-github-code.png)
+
+Fonte: https://github.com/aimiguelazio01/foodtruck
+
 ## 5. Variáveis de ambiente
 No alojamento, as variáveis do painel substituem o ficheiro local. Configure Production e Preview separadamente. Não ligue um preview de teste a dados de produção por engano.
 
@@ -80,6 +86,10 @@ No alojamento, as variáveis do painel substituem o ficheiro local. Configure Pr
 
 Email e storage são descritos nos capítulos seguintes. SUPABASE_SERVICE_ROLE_KEY, credenciais S3/R2 e Brevo só ficam na API. Não use prefixo NEXT_PUBLIC_ em segredos. A chave publishable/anon Supabase não substitui a ligação PostgreSQL ou chave de servidor. Não desative TLS para contornar erros.
 
+![Figura 2. Interface de variáveis, publicada na documentação oficial Vercel. Os valores da imagem são exemplos do fornecedor; use as variáveis deste manual.](images/instalacao-vercel-variaveis.png)
+
+Fonte: https://vercel.com/docs/environment-variables
+
 ## 6. Criar PostgreSQL no Supabase
 1. Entre em https://supabase.com/dashboard e crie um projeto na sua organização.
 2. Escolha região próxima da API, nome e password forte da base; guarde-a num gestor de passwords. Aguarde o projeto estar disponível.
@@ -94,6 +104,10 @@ No pooler, o utilizador costuma incluir a referência do projeto: foodtruck_app.
 Guarde as duas ligações em .env.install. Obtenha o certificado oficial indicado pelo Supabase; use DATABASE_CA_CERT_FILE localmente ou DATABASE_CA_CERT_PEM no Vercel. Valide TLS.
 
 As contas de clientes estão nas tabelas da API; a versão atual não usa Supabase Auth. Alterar os modelos de email do Supabase Auth não configura o envio desta aplicação [9].
+
+![Figura 3. Painel SSL ilustrado na documentação oficial Supabase: localizar Download Certificate. Esta não é uma captura da sua conta.](images/instalacao-supabase-ssl.png)
+
+Fonte: https://supabase.com/docs/guides/database/connecting-to-postgres
 
 ## 7. Outro fornecedor PostgreSQL
 Pode usar PostgreSQL próprio ou gerido, acessível por rede privada ou ligação autorizada. Escolha região, espaço, backups e limite de ligações.
@@ -150,6 +164,14 @@ Em alternativa, configure SMTP_URL e MAIL_FROM. Se BREVO_API_KEY existir, tem pr
 
 O plano gratuito indica 300 envios/dia, partilhados com os restantes envios da conta, sem acumulação. Confirme disponibilidade transacional e limites na sua conta [4].
 
+![Figura 4. Ecrã SMTP & API do guia oficial Brevo: escolher API Keys e Generate a new API key. Chaves existentes aparecem mascaradas.](images/instalacao-brevo-api.png)
+
+Fonte: https://developers.brevo.com/docs/api-key-authentication
+
+![Figura 5. Diálogo de nome da chave no guia oficial Brevo. Crie uma chave própria; nunca a publique nos manuais ou no GitHub.](images/instalacao-brevo-nome-chave.png)
+
+Fonte: https://developers.brevo.com/docs/api-key-authentication
+
 ## 11. Percurso A: API no Vercel
 Ligue o seu repositório GitHub ao Vercel. Crie três projetos do mesmo repositório. Primeiro publique a API.
 
@@ -188,6 +210,10 @@ Quando souber os dois URLs finais, atualize CUSTOMER_APP_URL, MANAGEMENT_APP_URL
 Entre na gestão com a conta do bootstrap, crie uma carrinha e confirme «Ver página de encomendas». Teste cliente, email, imagem, evento e encomenda antes de divulgar.
 
 NEXT_NO_ROUTES_MANIFEST costuma indicar raiz/framework/output incorretos ou build falhado. Veja a publicação nova, não um link antigo que continua falhado. A raiz geral do repositório não é o Root Directory dos sites.
+
+![Figura 6. Framework Settings, imagem da documentação oficial Vercel. Para esta aplicação, use npm run build e as raízes/output da tabela anterior; não copie os comandos de exemplo da imagem.](images/instalacao-vercel-build.png)
+
+Fonte: https://vercel.com/docs/builds/configure-a-build
 
 ## 13. Percurso B: servidor Docker
 Requer servidor com Docker Engine e Compose v2, espaço para base/imagens e dois domínios seus. Docker Desktop em Windows/macOS permite ensaios; produção pode usar Linux.
@@ -251,6 +277,10 @@ npx wrangler login
 npm run cf:deploy --workspace=food-truck-customer
 ```
 
+![Figura 7. Autorização de repositórios GitHub, ilustrada no guia oficial Cloudflare Workers. Autorize apenas o repositório necessário.](images/instalacao-cloudflare-repositorio.png)
+
+Fonte: https://developers.cloudflare.com/workers/ci-cd/builds/git-integration/github-integration/
+
 ## 16. Workers: gestão e GitHub
 Repita para o segundo site:
 
@@ -268,6 +298,10 @@ Para GitHub em Workers Builds, ligue o repositório e use raiz do monorepo, inst
 Configure workers.dev ou domínios personalizados. Atualize URLs e CORS na API externa, publique-a e teste sessões através dos sites finais.
 
 Não escolha HTML estático ou next-on-pages como substituição automática deste percurso dinâmico. Se preview falhar, corrija antes de publicar; Node/Docker continua disponível. Workers Free pode não ter CPU suficiente para páginas dinâmicas: avalie com carga real.
+
+![Figura 8. Exemplo de verificações do build publicado no guia Cloudflare Workers. Confirme os resultados antes de usar uma publicação.](images/instalacao-cloudflare-builds.png)
+
+Fonte: https://developers.cloudflare.com/workers/ci-cd/builds/git-integration/github-integration/
 
 ## 17. R2 para imagens, mantendo PostgreSQL
 R2 é armazenamento de objetos, não a base relacional. Pode substituir o bucket de imagens e manter PostgreSQL no fornecedor escolhido.
@@ -409,3 +443,4 @@ Fontes oficiais consultadas:
 [10] Cloudflare Next.js e D1: https://developers.cloudflare.com/workers/framework-guides/web-apps/nextjs/ e https://developers.cloudflare.com/d1/
 
 Reconfirme preços na contratação. Os exemplos não prometem custo zero ou capacidade ilimitada.
+

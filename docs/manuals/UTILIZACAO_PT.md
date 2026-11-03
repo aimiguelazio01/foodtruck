@@ -1,5 +1,5 @@
 # Manual de utilização
-Food Truck Live | Edição de 3 de novembro de 2026
+Food Truck Live | Edição ilustrada de 3 de novembro de 2026
 
 Guia para administradores, equipas de food trucks e clientes. Corresponde à versão com sites separados para clientes e gestão, API PostgreSQL e opção de interface Touch.
 
@@ -17,6 +17,12 @@ Uma conta de cliente não dá acesso à gestão. A conta do GitHub, Vercel, Supa
 
 O sistema suporta pagamento registado na recolha e modalidades de demonstração. Não inclui um processador de cartões ativo nem faturação fiscal certificada. As exportações Excel são ficheiros operacionais.
 
+As capturas desta edição foram recolhidas em 3 de novembro de 2026. Mostram a aplicação real ou exemplos publicados pelos fornecedores, identificados nas legendas. O aspeto pode variar com a versão e o tamanho do ecrã.
+
+![Figura 1. Página inicial real: escolher uma carrinha para abrir o seu menu.](images/cliente-inicio.png)
+
+Fonte: https://foodtruck-swart.vercel.app/
+
 ## 2. Entrar e escolher o negócio
 1. Abra o endereço da gestão no navegador.
 2. Introduza o email e a palavra-passe entregues pelo administrador da instalação.
@@ -29,6 +35,10 @@ Se se esqueceu da palavra-passe, use «Recuperar palavra-passe». O envio depend
 As opções disponíveis dependem das permissões. Se um menu não aparece, peça ao administrador que verifique o acesso. A aplicação pode abrir diretamente a área Rede quando a conta gere toda a organização.
 
 Na primeira instalação, o comando de bootstrap cria uma conta individual definida pelo instalador. Não há uma palavra-passe universal para novas instalações. As credenciais de demonstração antigas não devem ser usadas em produção.
+
+![Figura 2. Entrada na gestão: usar a conta da equipa. A conta de cliente é independente.](images/gestao-login.png)
+
+Fonte: https://foodtruck-management.vercel.app/
 
 ## 3. Layout Atual e modo Touch
 Nas áreas «Encomendas», «Menu digital», «Página de encomendas» e «Inventário», encontra «Modo de utilização» no topo.
@@ -46,6 +56,14 @@ O modo Touch usa controlos com pelo menos 52 px nas áreas abrangidas. Em ecrãs
 
 A escolha fica guardada neste navegador e aplica-se às quatro áreas. Não muda a apresentação do menu dos clientes, não altera as permissões e não muda dados. Noutro computador ou navegador, escolha novamente. O zoom e a limpeza dos dados do navegador podem afetar a preferência.
 
+![Figura 3. Layout Atual: o seletor de modo fica no topo da área.](images/gestao-menu-atual.png)
+
+Fonte: https://foodtruck-management.vercel.app/
+
+![Figura 4. O mesmo menu em Touch: controlos e texto maiores. A escolha fica neste navegador.](images/gestao-menu-touch.png)
+
+Fonte: https://foodtruck-management.vercel.app/
+
 ## 4. Criar e apresentar uma carrinha
 A conta com acesso à rede pode criar um negócio em «Rede > Negócios». Preencha o nome, endereço do menu e cor. Depois de criar, complete a apresentação no editor.
 
@@ -61,6 +79,10 @@ Em «Página de encomendas», escolha «Editar página». Pode preencher a descr
 O editor aceita PNG, JPEG e WebP até 3 MB. JPEG não suporta transparência. Uma grelha desenhada numa imagem não é transparência: o ficheiro precisa de canal alfa.
 
 Guarde com «Guardar e publicar alterações» e abra a página de encomendas para confirmar. Os ficheiros da pasta UPLOADS são recursos preparados para inserção manual; estar nessa pasta não publica automaticamente uma imagem ou um produto.
+
+![Figura 5. Editor real da carrinha: fotografia e logótipo são campos separados.](images/gestao-pagina-editor.png)
+
+Fonte: https://foodtruck-management.vercel.app/
 
 ## 5. Menu digital e produtos
 Em «Menu digital», confirme a carrinha e consulte os produtos. «Marcar indisponível» retira a disponibilidade do produto; «Disponibilizar» permite voltar a vendê-lo, sujeito ao stock e às restantes regras. A ação mantém a ordenação por nome.
@@ -89,6 +111,10 @@ Um negócio arquivado pode manter dados históricos e permitir editar a identida
 
 Ao mudar fotografias, valide os dois contextos: cartão da carrinha na página inicial e imagem dentro do seu menu. As fotografias de carrinhas têm apresentação horizontal; as fotografias de produtos usam o seu tratamento próprio.
 
+![Figura 6. Resultado público da Bella Pizza Mobile: apresentação e menu vistos pelo cliente.](images/cliente-menu.png)
+
+Fonte: https://foodtruck-swart.vercel.app/b/bella-pizza
+
 ## 7. Inventário e ingredientes
 Em «Inventário», pode pesquisar por ingrediente ou fornecedor, filtrar ativos, stock baixo, esgotados e removidos, e ordenar por nome ou menor disponibilidade.
 
@@ -106,6 +132,10 @@ Em «Inventário», pode pesquisar por ingrediente ou fornecedor, filtrar ativos
 
 Para recuperar um ingrediente removido, escolha «Mostrar > Removidos» e «Restaurar». A equipa deve conferir fisicamente o stock e registar correções justificadas. O sistema protege reservas para evitar retirar ingredientes já comprometidos.
 
+![Figura 7. Inventário em Touch: pesquisa, filtros e quantidades de stock.](images/gestao-inventario.png)
+
+Fonte: https://foodtruck-management.vercel.app/
+
 ## 8. Eventos, moradas e mapa
 Em «Calendário», crie ou edite um evento. Escolha a carrinha, título, nome do local, morada, início, fim e publicação. O nome do local é uma designação reconhecível, como «Parque das Nações»; o título identifica a iniciativa.
 
@@ -118,6 +148,14 @@ Verifique a data, a hora e o fuso de Portugal continental. O fim deve ser poster
 Na página inicial dos clientes, «Onde estamos agora» mostra pontos publicados. Um evento em curso tem prioridade sobre a localização manual da carrinha. Se não existe localização atual publicada, um evento futuro pode aparecer como «Próxima paragem», com início e fim, sem ser confundido com uma presença atual.
 
 Alterar o evento ou a localização com coordenadas atualiza o pin automaticamente; não é preciso pedir à IA para redesenhar o mapa. A página consulta alterações a cada 15 segundos enquanto está ativa e ligada à internet. Isto é atualização da localização publicada, não rastreio GPS contínuo do veículo.
+
+![Figura 8. Formulário real de evento: carrinha, título, local, morada, horas, publicação e mapa. Não foi guardado um evento para esta captura.](images/gestao-evento-editor.png)
+
+Fonte: https://foodtruck-management.vercel.app/
+
+![Figura 9. Localizações no site dos clientes. O mapa representa pontos publicados; não é GPS contínuo.](images/cliente-mapa.png)
+
+Fonte: https://foodtruck-swart.vercel.app/#localizacoes
 
 ## 9. Trabalhar com encomendas
 Escolha «Encomendas» e a carrinha correta. Pode alternar entre «Cartões» e «Lista», agrupar por dia de recolha ou evento, filtrar por estado e pesquisar por número, cliente, artigo ou evento.
@@ -137,6 +175,10 @@ As reservas de ingredientes e o consumo são controlados pelo servidor. Cancelam
 Se a encomenda pronta está por pagar, use «Registar pagamento» depois de receber o valor. Pagamento real na recolha e pagamento de demonstração são apresentados separadamente.
 
 Não marque «Recolhida» apenas porque a comida está pronta. Esse estado confirma que já foi entregue. Pedidos pendentes podem expirar de acordo com as regras do sistema; confirme-os atempadamente.
+
+![Figura 10. Encomendas: Cartões/Lista, agrupamento, pesquisa e Exportar Excel. Identificadores e dados pessoais foram ocultados na captura.](images/gestao-encomendas.png)
+
+Fonte: https://foodtruck-management.vercel.app/
 
 ## 10. Exportar para Excel
 Em «Encomendas», carregue em «Exportar Excel». Aguarde a preparação e guarde o ficheiro .xlsx descarregado pelo navegador.
@@ -162,6 +204,10 @@ Uma encomenda feita como visitante pode apresentar «Associar à minha conta». 
 Na conta, o cliente consulta as encomendas, o número e o estado. Enquanto o pedido está ativo, pode acompanhá-lo. Depois de ficar «Recolhida», deixa de aparecer o botão «Acompanhar encomenda», porque o atendimento está concluído.
 
 Se o email não chegar, confirmar o endereço, spam e separadores do correio; depois pedir reenvio e contactar o administrador se persistir. Os emails da aplicação são enviados pela API; mudar definições de Supabase Auth não corrige, por si só, este envio.
+
+![Figura 11. Conta do cliente: entrar, reenviar confirmação, criar conta ou recuperar palavra-passe.](images/cliente-conta.png)
+
+Fonte: https://foodtruck-swart.vercel.app/account
 
 ## 12. Rede, equipa e rotinas
 A área Rede permite organizar carrinhas e consultar opções de equipa, horários, modelos de menu e transferências. Só administradores autorizados devem criar negócios e conceder permissões.
@@ -195,3 +241,4 @@ A disponibilidade e o aspeto dependem do navegador e do sistema operativo. Esta 
 O atalho não instala a base de dados no dispositivo. A gestão, as encomendas e as alterações de stock precisam de ligação ao servidor. Não assuma que encomendas feitas sem internet serão enviadas mais tarde.
 
 Mantenha o navegador atualizado, use bloqueio de ecrã e confirme o endereço antes de entrar. Em equipamentos partilhados, termine sessão quando acabar. Para instalar o servidor, migrar dados ou mudar de alojamento, consulte o manual de instalação que acompanha esta edição.
+
