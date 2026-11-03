@@ -11,8 +11,7 @@ O Food Truck Live permite gerir uma rede de carrinhas, publicar menus e eventos,
 | Gestão | Produtos, stock, encomendas, eventos, equipa e identidade dos negócios. |
 | Rede | Criar e organizar negócios, horários, modelos e transferências. |
 
-Na instalação de referência, os clientes entram em https://foodtruck-swart.vercel.app e a equipa em https://foodtruck-management.vercel.app
-Numa instalação própria, o instalador fornece outros endereços.
+Na instalação da aplicação, utilize os endereços do site dos clientes e da gestão que lhe foram fornecidos pelo responsável pela instalação.
 
 Uma conta de cliente não dá acesso à gestão. A conta do GitHub, Vercel, Supabase ou Brevo também não é a conta de gestão da aplicação.
 

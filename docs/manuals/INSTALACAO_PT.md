@@ -41,12 +41,12 @@ GitHub é o site onde ficam os ficheiros da aplicação. Um «repositório» é 
 1. Abra https://github.com no navegador.
 2. Carregue em Sign up, que significa criar conta. Se já tem conta, use Sign in, que significa entrar.
 3. Preencha os dados pedidos e confirme o email recebido. Guarde o seu nome de utilizador.
-4. Depois de entrar, abra https://github.com/aimiguelazio01/foodtruck.
+4. Depois de entrar, abra o repositório da aplicação através do endereço que lhe foi fornecido por quem partilhou o projeto.
 5. No topo do projeto, procure Fork e carregue nesse botão.
-6. No campo Owner, escolha a sua conta. No nome do projeto, pode manter foodtruck.
+6. No campo Owner, escolha a sua conta. Pode manter o nome de projeto sugerido ou escolher outro.
 7. Carregue em Create fork e aguarde.
 
-Como confirmar: o endereço deve começar por github.com/SEU-UTILIZADOR/foodtruck. O seu nome deve aparecer como proprietário da cópia.
+Como confirmar: a página do projeto mostra a sua conta como proprietária da cópia e o nome de projeto que escolheu.
 
 Se Fork não aparecer, confirme que entrou na conta. Não crie ficheiros novos manualmente e não altere os ficheiros que já lá estão para continuar esta instalação.
 
@@ -65,7 +65,7 @@ Um ZIP é um conjunto de ficheiros guardados dentro de um único ficheiro. Antes
 
 Não trabalhe dentro da janela do ZIP. Os ficheiros têm de estar extraídos numa pasta normal.
 
-![Menu Code real do GitHub: Download ZIP permite descarregar os ficheiros.](images/instalacao-github-code.png)
+![Menu Code do GitHub, com os dados do exemplo ocultados: Download ZIP permite descarregar os ficheiros.](images/instalacao-github-code.png)
 
 Como confirmar: consegue abrir package.json na pasta normal do computador. Não precisa de compreender o seu conteúdo.
 
@@ -228,7 +228,7 @@ Vercel vai publicar os sites e a API. «Publicar» significa pôr a aplicação 
 1. Abra https://vercel.com/signup.
 2. Escolha Continue with GitHub / Continuar com GitHub.
 3. Entre na conta GitHub onde fez o Fork.
-4. Se aparecer um pedido de acesso, autorize o Vercel a ver o repositório foodtruck da sua conta.
+4. Se aparecer um pedido de acesso, autorize o Vercel a ver o repositório que contém a sua cópia da aplicação.
 5. Volte ao painel Vercel.
 
 Como confirmar: consegue abrir o painel e vê o seu nome ou equipa. Vercel não precisa das palavras-passe da base nem da gestão.
@@ -236,14 +236,14 @@ Como confirmar: consegue abrir o painel e vê o seu nome ou equipa. Vercel não 
 ## 14. Criar três projetos no Vercel
 A aplicação tem três partes online: a API, o site dos clientes e a gestão. Cada projeto usa uma pasta diferente da mesma cópia GitHub.
 
-Repita Add New > Project / Novo projeto três vezes. Em cada projeto, selecione o repositório foodtruck da sua conta.
+Repita Add New > Project / Novo projeto três vezes. Em cada projeto, selecione o repositório que contém a sua cópia da aplicação.
 
 | Nome sugerido | Root Directory / pasta | Framework |
 | API | services/api | Other |
-| foodtruck-clientes | apps/customer | Next.js |
-| foodtruck-gestao | apps/management | Next.js |
+| site-clientes | apps/customer | Next.js |
+| site-gestao | apps/management | Next.js |
 
-«Root Directory» quer dizer a pasta que o Vercel publica. Não deixe os três projetos a usar a pasta principal foodtruck. Nos dois sites, mantenha Build Command como npm run build e Output Directory como .next. A API usa a configuração que já vem na pasta; não escreva .next como saída da API.
+«Root Directory» quer dizer a pasta que o Vercel publica. Não deixe os três projetos a usar a pasta principal do repositório. Nos dois sites, mantenha Build Command como npm run build e Output Directory como .next. A API usa a configuração que já vem na pasta; não escreva .next como saída da API.
 
 Se aparecer Include files outside the Root Directory / Incluir ficheiros fora da pasta principal, ative essa opção. Os projetos precisam de ficheiros partilhados que estão noutras pastas.
 
@@ -252,14 +252,14 @@ O primeiro carregamento pode falhar até configurar os endereços nos capítulos
 ![Exemplo do guia oficial Vercel: campos da configuração de compilação. Use as pastas deste manual, não copie valores da imagem.](images/instalacao-vercel-build.png)
 Fonte: https://vercel.com/docs/builds/configure-a-build
 
-Como confirmar: existem três projetos e cada um indica a pasta certa. Abra cada projeto e copie o endereço que termina em .vercel.app. Anote os três endereços num lugar privado.
+Como confirmar: existem três projetos e cada um indica a pasta certa. Abra cada projeto, copie os endereços apresentados pelo Vercel e anote-os num lugar privado.
 
 ## 15. Configurar e publicar a API
 A API é o balcão interno que recebe as ações dos sites. Só a API recebe as chaves privadas da base, das imagens e do email.
 
 1. No Vercel, abra o projeto API > Settings > Environment Variables.
 2. Adicione cada nome da lista abaixo, um de cada vez. Escolha Production no campo Environment. Marque Secret para palavras-passe, chaves e ligações da base.
-3. Para DATABASE_URL, abra Supabase > Connect e copie a ligação Transaction pooler. Se essa opção não aparecer, copie Session pooler. Substitua [YOUR-palavra-passe] pela palavra-passe foodtruck_app e siga o formato de utilizador indicado pelo painel.
+3. Para DATABASE_URL, abra Supabase > Connect e copie a ligação Transaction pooler. Se essa opção não aparecer, copie Session pooler. Substitua [YOUR-PASSWORD] pela palavra-passe foodtruck_app e siga o formato de utilizador indicado pelo painel.
 4. Para DATABASE_CA_CERT_PEM, descarregue o certificado de raiz PostgreSQL na página de ligação/SSL do Supabase. Abra o ficheiro com um editor de texto e copie tudo, incluindo BEGIN CERTIFICATE e END CERTIFICATE. Cole o conteúdo completo no Vercel.
 5. Para CUSTOMER_APP_URL e MANAGEMENT_APP_URL, use os dois endereços dos projetos de clientes e gestão anotados no capítulo 14. Escreva https:// antes do endereço.
 6. Em CORS_ORIGINS, escreva os mesmos dois endereços, separados por vírgula. Não inclua caminhos nem barra no fim.
@@ -275,30 +275,30 @@ Fonte: https://vercel.com/docs/environment-variables
 
 Abra Deployments e escolha Redeploy na publicação mais recente. Aguarde até o estado ser Ready / Pronto.
 
-Como confirmar: abra https://O-SEU-ENDERECO-DA-API.vercel.app/api/v1/health. Deve aparecer uma resposta com ok true. A página principal da API não tem menu nem formulário de login.
+Como confirmar: abra o endereço HTTPS da API e acrescente /api/v1/health no fim. Deve aparecer uma resposta com ok true. A página principal da API não tem menu nem formulário de login.
 
 ## 16. Publicar o site dos clientes
 O site dos clientes tem de saber o endereço da API para ir buscar menus e enviar encomendas.
 
-1. No Vercel, abra foodtruck-clientes > Settings > Environment Variables.
-2. Crie INTERNAL_API_URL com o endereço HTTPS da API, por exemplo https://foodtruck-api.vercel.app. Use o seu endereço real, não este exemplo.
+1. No Vercel, abra o projeto de clientes > Settings > Environment Variables.
+2. Crie INTERNAL_API_URL com o endereço HTTPS que o Vercel apresenta para a sua API.
 3. Escolha Production e guarde.
 4. Abra Deployments e carregue em Redeploy para compilar o site com o novo endereço.
 5. Espere até aparecer Ready / Pronto.
 
-Como confirmar: abra o endereço .vercel.app de foodtruck-clientes. Deve carregar a página inicial.
+Como confirmar: abra o endereço que o Vercel apresenta para o projeto de clientes. Deve carregar a página inicial.
 
 Se surgir NEXT_NO_ROUTES_MANIFEST, confirme Root Directory=apps/customer, framework Next.js e Output Directory=.next. Abra os detalhes da compilação e leia a primeira mensagem de erro.
 
 ## 17. Publicar a gestão
 Faça o mesmo para o projeto de gestão.
 
-1. Abra foodtruck-gestao > Settings > Environment Variables.
+1. Abra o projeto de gestão > Settings > Environment Variables.
 2. Crie INTERNAL_API_URL com o endereço HTTPS da API.
 3. Escolha Production, guarde e abra Deployments.
 4. Carregue em Redeploy e aguarde por Ready / Pronto.
 
-Como confirmar: o endereço .vercel.app da gestão mostra o início de sessão. Se der erro de ligação, verifique o endereço da API e confirme que o projeto da API está Ready.
+Como confirmar: o endereço apresentado pelo Vercel para a gestão mostra o início de sessão. Se der erro de ligação, verifique o endereço da API e confirme que o projeto da API está Ready.
 
 No Vercel, confirme Root Directory=apps/management, framework Next.js e Output Directory=.next. Se aparecer NEXT_NO_ROUTES_MANIFEST, abra o registo de compilação para encontrar o primeiro erro; a mensagem final, sozinha, não explica a causa.
 
@@ -351,7 +351,7 @@ Use esta opção só depois de o site funcionar no Vercel. Requer comandos no te
 2. Substitua o endereço abaixo pelo domínio real da sua API e execute:
 
 ```sh
-npm run cloudflare:prepare -- customer https://SUA-API.vercel.app
+npm run cloudflare:prepare -- customer https://ENDERECO-HTTPS-DA-API
 ```
 
 3. Aguarde que as ferramentas sejam instaladas. Depois execute:
@@ -376,7 +376,7 @@ npm run cf:deploy --workspace=food-truck-customer
 6. Repita o processo para a gestão:
 
 ```sh
-npm run cloudflare:prepare -- management https://SUA-API.vercel.app
+npm run cloudflare:prepare -- management https://ENDERECO-HTTPS-DA-API
 npm run cf:build --workspace=food-truck-management
 npm run cf:preview --workspace=food-truck-management
 npm run cf:deploy --workspace=food-truck-management
@@ -526,7 +526,7 @@ A aplicação web não inclui pagamentos com cartão nem faturação fiscal cert
 ## 29. Referências oficiais para as imagens e instruções
 As imagens de fornecedores são exemplos publicados nas páginas oficiais, não capturas da sua conta. Os botões podem mudar. Abra as páginas seguintes para ver a documentação original.
 
-- GitHub: https://github.com/aimiguelazio01/foodtruck
+- GitHub, criar conta e gerir repositórios: https://github.com
 - Supabase, ligação PostgreSQL e certificado: https://supabase.com/docs/guides/database/connecting-to-postgres
 - Brevo, criar uma chave API: https://developers.brevo.com/docs/api-key-authentication
 - Vercel, variáveis: https://vercel.com/docs/environment-variables

@@ -54,8 +54,8 @@ Instale Node.js 24 e Git dos sites oficiais. Confirme node --version, npm --vers
 Faça Fork do repositório ou envie o código para um repositório seu. Use um repositório privado se não quer divulgar conteúdos. Nunca envie dados de clientes ou chaves.
 
 ```sh
-git clone https://github.com/aimiguelazio01/foodtruck.git
-cd foodtruck
+git clone COLE_AQUI_O_ENDERECO_HTTPS_DO_SEU_REPOSITORIO
+cd NOME_DA_PASTA_DO_PROJETO
 npm ci --include=dev
 npm run install:init
 ```
@@ -64,9 +64,9 @@ Com ZIP, extraia para uma pasta sua, abra o terminal nessa pasta e execute npm c
 
 install:init cria .env.install apenas se ainda não existir. Edite esse ficheiro com os seus valores e guarde. Não o publique. Depois execute npm run install:check. O diagnóstico de configuração não cria base, compra serviços ou publica a aplicação.
 
-![Figura 1. Repositório real no GitHub, menu Code aberto: copiar a ligação ou escolher Download ZIP.](images/instalacao-github-code.png)
+![Figura 1. Menu Code do GitHub com os dados de conta e o endereço do exemplo ocultados.](images/instalacao-github-code.png)
 
-Fonte: https://github.com/aimiguelazio01/foodtruck
+
 
 ## 5. Variáveis de ambiente
 No alojamento, as variáveis do painel substituem o ficheiro local. Configure Production e Preview separadamente. Não ligue um preview de teste a dados de produção por engano.
