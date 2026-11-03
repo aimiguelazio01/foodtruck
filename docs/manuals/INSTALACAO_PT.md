@@ -1,446 +1,536 @@
-# Manual de instalação e alojamento
-Food Truck Live | Edição ilustrada de 3 de novembro de 2026
+# Instalar o Food Truck Live, passo a passo
+Food Truck Live | Guia ilustrado para principiantes | 3 de novembro de 2026
 
-Guia para uma instalação nova, manutenção e migração. Inclui GitHub, PostgreSQL/Supabase, email Brevo ou SMTP, Vercel, Cloudflare e servidor Node.js/Docker. Os comandos partem da raiz do projeto salvo indicação em contrário. Valores example.com são exemplos a substituir.
+Este manual começa do zero. Não precisa de saber programar. Leia um capítulo de cada vez, faça os passos e confirme o resultado antes de continuar. As palavras em inglês correspondem aos nomes dos botões dos sites.
 
-## 1. Escolher o percurso certo
-O Food Truck Live precisa de dois sites Next.js, uma API Node.js, PostgreSQL, armazenamento persistente de imagens e email para confirmação/recuperação de contas.
+## 1. O que vai instalar
+No fim terá dois endereços na internet. Um é para os clientes escolherem a carrinha e fazerem encomendas. O outro é para a equipa gerir produtos, ingredientes, eventos e pedidos.
 
-| Percurso | Componentes e indicação |
-| A - Vercel e Supabase | Dois sites e API no Vercel; PostgreSQL e imagens no Supabase; email Brevo. Modelo da instalação de referência. |
-| B - Docker e Cloudflare DNS | Serviços num servidor Docker; PostgreSQL e disco em volumes; Cloudflare para domínio/proteção; Brevo ou SMTP. Mais controlo e manutenção. |
-| C - Workers e API externa | Sites Cloudflare Workers com OpenNext; API num alojamento Node.js/Vercel; PostgreSQL externo; imagens Supabase/S3/R2. Percurso avançado. |
-| D - Node.js genérico | Sites e API em processos Node.js; PostgreSQL gerido ou próprio; proxy HTTPS e armazenamento escolhido. |
+A aplicação precisa também de um serviço que trata os pedidos e de um lugar onde guardar os dados. Vamos preparar estas partes, uma a uma.
 
-Cloudflare e Supabase não são substitutos diretos: Cloudflare pode alojar os sites e proteger domínios; Supabase fornece PostgreSQL e armazenamento. Podem ser usados em conjunto. Carregar ficheiros num alojamento estático/PHP ou criar só uma base não instala esta aplicação.
+| Nome que encontrará | Explicação simples |
+| Site dos clientes | A montra e o balcão de encomendas. |
+| Gestão | A área de trabalho da equipa, protegida por palavra-passe. |
+| API | A parte que liga os sites aos dados e executa as operações. O cliente não tem de a abrir. |
+| Base de dados | Um arquivo organizado: guarda produtos, contas, stock e encomendas. |
+| Imagens | Ficheiros das fotografias e logótipos, guardados separadamente dos dados. |
 
-As capturas desta edição foram recolhidas em 3 de novembro de 2026. Mostram a aplicação real ou exemplos publicados pelos fornecedores, identificados nas legendas. O aspeto pode variar com a versão e o tamanho do ecrã.
+Uma instalação nova começa vazia. Não recebe contas ou encomendas da instalação de outra pessoa. Mais tarde vai criar a sua própria conta de administrador e a primeira carrinha.
 
-## 2. Compatibilidade e limites
-Requisitos de referência: Node.js 24, npm com workspaces e PostgreSQL. A instalação de referência usa PostgreSQL 17; o ambiente local também usa 18. Noutras versões, valide migrações e testes numa base separada.
+![Exemplo real do resultado: a página inicial que os seus clientes poderão abrir.](images/cliente-inicio.png)
 
-| Componente | Compatibilidade preparada |
-| Sites | Node.js/Next.js, Docker ou Vercel; modelos opcionais OpenNext para Workers. |
-| API | Node.js/Fastify em servidor ou contentor; função HTTP própria no Vercel. |
-| Base | PostgreSQL com transações, JSONB e permissões necessárias. |
-| Imagens | Disco persistente, bucket privado Supabase ou API S3, incluindo R2. |
-| Email | API Brevo ou SMTP externo. |
-| Sistema | Windows, macOS e Linux com Node.js; Docker requer contentores Linux suportados pelo anfitrião. |
+## 2. Para que serve cada serviço
+Não são cinco maneiras de fazer a mesma coisa. Cada serviço tem uma tarefa.
 
-MySQL, MariaDB, SQL Server, SQLite e Cloudflare D1 não são substituições diretas. A versão atual usa funcionalidades PostgreSQL. Não há promessa de instalar sem adaptação em todos os motores ou planos de alojamento.
+| Serviço | Para que vai servir |
+| GitHub | Guarda os ficheiros que fazem a aplicação funcionar. Pense numa pasta do projeto na internet. |
+| Supabase | Guarda a base de dados e as imagens. É onde os dados ficam mesmo quando fecha o computador. |
+| Brevo | Envia os emails de confirmação e de recuperação de palavra-passe. |
+| Vercel | Põe os dois sites e a API a funcionar na internet. |
+| Cloudflare | Alternativa para alojar os sites ou gerir um endereço próprio. Não é necessário no percurso principal. |
 
-O atalho/PWA depende do navegador; não é um pacote nativo e não remove a necessidade de ligação ao servidor.
+Neste manual, comece por GitHub, Supabase, Brevo e Vercel. Siga os capítulos 3 a 18 pela ordem indicada. Os capítulos Cloudflare e alojamento próprio são alternativas: leia-os só se escolher esse caminho.
 
-## 3. Conteúdo do pacote e dados privados
-O pacote contém código, dependências bloqueadas, migrações, imagens públicas, recursos UPLOADS, exemplos, Docker, modelos de publicação e os manuais. Não inclui base operacional, contas/clientes, encomendas, passwords, chaves, sessões, ficheiros .env privados, node_modules ou caches. Uma instalação nova começa vazia.
+Ter conta num serviço não cria automaticamente os outros. Por exemplo, criar Supabase não publica os sites; criar Vercel não cria a base de dados.
 
-UPLOADS contém recursos para inserção manual. Não é o armazenamento operacional da API. Fazer backup dessa pasta não substitui copiar data/uploads ou os objetos do bucket.
+Pode fazer pausas entre capítulos. Guarde os acessos num gestor de palavras-passe e anote em que passo ficou. Não precisa de comprar um domínio para testar: os serviços fornecem endereços próprios.
 
-| Caminho | Função |
-| apps/customer | Site dos clientes, porta habitual 3000. |
-| apps/management | Gestão, porta habitual 3001. |
-| services/api | API PostgreSQL, porta habitual 4000. |
-| services/api/migrations | Evolução da estrutura da base. |
-| .env.install.example | Modelo da configuração portátil. |
-| compose.install.yaml | Instalação Docker com PostgreSQL e HTTPS. |
-| deployment/cloudflare | Modelos opcionais Workers. |
-| docs/manuals | Fontes e PDFs dos manuais. |
+## 3. Criar a sua conta GitHub e copiar o projeto
+GitHub é o site onde ficam os ficheiros da aplicação. Um «repositório» é simplesmente a pasta do projeto nesse site. «Fork» significa fazer uma cópia para a sua conta.
 
-Há código da versão antiga no repositório. Este manual usa a arquitetura PostgreSQL atual; não execute scripts legacy SQLite para a instalar.
+1. Abra https://github.com no navegador.
+2. Carregue em Sign up, que significa criar conta. Se já tem conta, use Sign in, que significa entrar.
+3. Preencha os dados pedidos e confirme o email recebido. Guarde o seu nome de utilizador.
+4. Depois de entrar, abra https://github.com/aimiguelazio01/foodtruck.
+5. No topo do projeto, procure Fork e carregue nesse botão.
+6. No campo Owner, escolha a sua conta. No nome do projeto, pode manter foodtruck.
+7. Carregue em Create fork e aguarde.
 
-## 4. Obter o código por GitHub ou ZIP
-Instale Node.js 24 e Git dos sites oficiais. Confirme node --version, npm --version e git --version no terminal.
+Como confirmar: o endereço deve começar por github.com/SEU-UTILIZADOR/foodtruck. O seu nome deve aparecer como proprietário da cópia.
 
-Faça Fork do repositório ou envie o código para um repositório seu. Use um repositório privado se não quer divulgar conteúdos. Nunca envie dados de clientes ou chaves.
+Se Fork não aparecer, confirme que entrou na conta. Não crie ficheiros novos manualmente e não altere os ficheiros que já lá estão para continuar esta instalação.
+
+Esta conta GitHub não é o login da gestão Food Truck Live. A conta da aplicação será criada no capítulo 12.
+
+## 4. Descarregar e abrir a pasta no computador
+Um ZIP é um conjunto de ficheiros guardados dentro de um único ficheiro. Antes de usar os ficheiros, é preciso extraí-los.
+
+1. Na sua cópia GitHub, carregue no botão verde Code.
+2. No menu que abre, escolha Download ZIP.
+3. Abra a pasta Transferências do computador e encontre o ficheiro descarregado.
+4. No Windows, carregue nele com o botão direito e escolha Extrair tudo. No macOS, abra o ZIP com duplo clique.
+5. Escolha uma pasta que consiga encontrar facilmente. Por exemplo, Documentos > FoodTruckLive.
+6. Abra a pasta extraída. Se só vir outra pasta dentro, abra essa segunda pasta.
+7. Confirme que vê o ficheiro package.json e as pastas apps e services. Essa é a pasta principal do projeto.
+
+Não trabalhe dentro da janela do ZIP. Os ficheiros têm de estar extraídos numa pasta normal.
+
+![Menu Code real do GitHub: Download ZIP permite descarregar os ficheiros.](images/instalacao-github-code.png)
+
+Como confirmar: consegue abrir package.json na pasta normal do computador. Não precisa de compreender o seu conteúdo.
+
+## 5. Instalar duas ferramentas no computador
+Vai usar Node.js para executar a preparação e Visual Studio Code para abrir os ficheiros e escrever os comandos. Não precisa de comprar extensões nem de usar inteligência artificial.
+
+1. Abra https://nodejs.org. Procure a versão 24 e descarregue o instalador adequado ao seu sistema, Windows ou macOS.
+2. Execute o instalador e conclua os passos. Pode manter as opções habituais. Se pedir reinício, faça-o.
+3. Abra https://code.visualstudio.com e descarregue Visual Studio Code para o seu sistema.
+4. Instale e abra o programa. «Visual Studio Code» é o nome completo; não é necessário instalar o programa maior chamado «Visual Studio».
+5. No programa, escolha File > Open Folder, ou Ficheiro > Abrir pasta.
+6. Escolha a pasta principal que identificou no capítulo 4. À esquerda devem aparecer apps, services e package.json.
+7. Se aparecer uma pergunta de confiança, confirme apenas porque abriu a cópia do projeto que acabou de obter.
+
+Como confirmar: vê os ficheiros numa coluna à esquerda do Visual Studio Code. Não abra ficheiros de uma pasta com o mesmo nome que ainda esteja dentro do ZIP.
+
+Em Linux, use os instaladores/instruções oficiais para Node.js 24 e Visual Studio Code. As etapas seguintes dentro do editor são semelhantes.
+
+## 6. Usar o terminal, sem saber programar
+O terminal é uma pequena janela onde escreve uma instrução e carrega em Enter. Cada instrução neste manual está numa caixa cinzenta. Copie só a instrução, não a palavra «sh» nem as aspas do texto à volta.
+
+1. No Visual Studio Code, abra Terminal > New Terminal, ou Terminal > Novo terminal.
+2. No Windows, se puder escolher o tipo, escolha Command Prompt / Linha de comandos. Isto evita um bloqueio frequente do PowerShell ao executar npm.
+3. Escreva a primeira instrução e carregue em Enter:
 
 ```sh
-git clone https://github.com/aimiguelazio01/foodtruck.git
-cd foodtruck
+node --version
+```
+
+4. Deve aparecer um número que começa por v24. Se disser que não conhece node, feche e abra o editor depois da instalação; confirme que instalou Node.js 24.
+5. Execute agora:
+
+```sh
 npm ci --include=dev
+```
+
+O programa vai buscar as peças de software de que a aplicação precisa. Aguarde até voltar a aparecer a linha onde pode escrever. Não feche a janela enquanto trabalha. Avisos não são sempre erros; se o comando terminar com erro, veja o capítulo 26.
+
+6. Execute:
+
+```sh
 npm run install:init
 ```
 
-Com ZIP, extraia para uma pasta sua, abra o terminal nessa pasta e execute npm ci e install:init. Não execute dentro do ZIP. O nome da pasta pode variar.
+Como confirmar: aparece um ficheiro chamado .env.install na coluna da esquerda. Se o programa disser que já existe, não o apague; abra o ficheiro existente. O nome começa mesmo por um ponto.
 
-install:init cria .env.install apenas se ainda não existir. Edite esse ficheiro com os seus valores e guarde. Não o publique. Depois execute npm run install:check. O diagnóstico de configuração não cria base, compra serviços ou publica a aplicação.
+## 7. Criar o projeto Supabase
+Supabase é onde vai guardar os dados e as imagens. PostgreSQL é o nome do tipo de base de dados usado pela aplicação; não é outra conta para criar.
 
-![Figura 1. Repositório real no GitHub, menu Code aberto: copiar a ligação ou escolher Download ZIP.](images/instalacao-github-code.png)
+1. Abra https://supabase.com/dashboard.
+2. Crie conta ou entre. Pode usar a opção de entrar com GitHub, se preferir.
+3. Se pedir uma organização, crie uma com o nome do seu negócio ou projeto. É apenas a forma de agrupar os seus projetos nessa conta.
+4. Escolha New project / Novo projeto.
+5. Dê-lhe um nome fácil de reconhecer, por exemplo foodtruck.
+6. Crie uma palavra-passe forte para a base e guarde-a. Esta é a palavra-passe administrativa da base; não é a da gestão da aplicação.
+7. Escolha uma região próxima da utilização, por exemplo uma região europeia para Portugal.
+8. Confirme o plano escolhido e crie o projeto. Aguarde até o painel estar pronto.
 
-Fonte: https://github.com/aimiguelazio01/foodtruck
+Como confirmar: o painel mostra o projeto criado e permite abrir as opções Database, Storage e SQL Editor.
 
-## 5. Variáveis de ambiente
-No alojamento, as variáveis do painel substituem o ficheiro local. Configure Production e Preview separadamente. Não ligue um preview de teste a dados de produção por engano.
+Se estiver a fazer uma instalação nova, crie um projeto novo. Não use este manual para apagar ou reiniciar um projeto que já tenha encomendas.
 
-| Variável | Destino e função |
-| DATABASE_URL | API/worker: PostgreSQL de execução. |
-| DATABASE_MIGRATION_URL | Instalação: ligação direta/session para migração e backup. |
-| DATABASE_CA_CERT_PEM | Servidor: conteúdo do certificado oficial da base. |
-| DATABASE_CA_CERT_FILE | Node/Docker: caminho de certificado existente no servidor. |
-| CUSTOMER_APP_URL | API: URL público final dos clientes. |
-| MANAGEMENT_APP_URL | API: URL público final da gestão. |
-| CORS_ORIGINS | API: duas origens separadas por vírgula, sem barra final. |
-| INTERNAL_API_URL | Sites, no build e runtime: URL da API. |
-| API_UPDATES_MODE | API: poll para transaction pooler ou sem streams; stream exige ligação adequada e worker. |
-| DATA_DIRECTORY | API/worker: diretório persistente se usar disco. |
-| DEMO_MODE | Usar 0 em produção; não cria dados de demonstração. |
+## 8. Preparar uma área privada para os dados
+SQL é o nome da linguagem usada para dar instruções à base de dados. Não precisa de a aprender: neste passo vai copiar um pequeno texto fornecido pelo projeto.
 
-Email e storage são descritos nos capítulos seguintes. SUPABASE_SERVICE_ROLE_KEY, credenciais S3/R2 e Brevo só ficam na API. Não use prefixo NEXT_PUBLIC_ em segredos. A chave publishable/anon Supabase não substitui a ligação PostgreSQL ou chave de servidor. Não desative TLS para contornar erros.
+Um «esquema» é uma área organizada dentro da base. Vamos chamar-lhe foodtruck. Vamos também criar o acesso foodtruck_app, usado só pela aplicação.
 
-![Figura 2. Interface de variáveis, publicada na documentação oficial Vercel. Os valores da imagem são exemplos do fornecedor; use as variáveis deste manual.](images/instalacao-vercel-variaveis.png)
+1. Crie e guarde uma segunda palavra-passe aleatória, com pelo menos 32 caracteres, usando letras e números. Não use uma frase previsível. Usar só letras/números evita problemas ao colar esta palavra-passe nos endereços do passo seguinte.
+2. No Supabase, abra SQL Editor e escolha New query / Nova consulta.
+3. No Visual Studio Code, abra a pasta deployment e o ficheiro postgres-bootstrap.sql.example.
+4. Copie o conteúdo para o SQL Editor do Supabase.
+5. Substitua apenas SUBSTITUIR_POR_SEGREDO_UNICO pela segunda palavra-passe. Mantenha as duas plicas que ficam à volta dela. Não escreva essa palavra-passe num manual ou mensagem.
+6. No fim, acrescente esta linha, própria do Supabase:
 
-Fonte: https://vercel.com/docs/environment-variables
-
-## 6. Criar PostgreSQL no Supabase
-1. Entre em https://supabase.com/dashboard e crie um projeto na sua organização.
-2. Escolha região próxima da API, nome e password forte da base; guarde-a num gestor de passwords. Aguarde o projeto estar disponível.
-3. Em Connect, identifique Direct, Session pooler e Transaction pooler. Copie os endereços reais; não invente o hostname.
-4. Use Direct ou Session para instalar/migrar. Para API serverless, use Transaction, habitualmente na porta 6543.
-5. No SQL Editor, use deployment/postgres-bootstrap.sql.example, substituindo o segredo. O modelo é para base nova, não para reparar uma existente.
-
-O modelo cria foodtruck_app e o esquema foodtruck, define o search_path e retira acesso público. No Supabase, retire também acesso a anon/authenticated conforme o modelo; não exponha foodtruck na Data API.
-
-No pooler, o utilizador costuma incluir a referência do projeto: foodtruck_app.REFERENCIA. Use o formato do painel para esse papel. Caracteres especiais na password precisam de codificação URL.
-
-Guarde as duas ligações em .env.install. Obtenha o certificado oficial indicado pelo Supabase; use DATABASE_CA_CERT_FILE localmente ou DATABASE_CA_CERT_PEM no Vercel. Valide TLS.
-
-As contas de clientes estão nas tabelas da API; a versão atual não usa Supabase Auth. Alterar os modelos de email do Supabase Auth não configura o envio desta aplicação [9].
-
-![Figura 3. Painel SSL ilustrado na documentação oficial Supabase: localizar Download Certificate. Esta não é uma captura da sua conta.](images/instalacao-supabase-ssl.png)
-
-Fonte: https://supabase.com/docs/guides/database/connecting-to-postgres
-
-## 7. Outro fornecedor PostgreSQL
-Pode usar PostgreSQL próprio ou gerido, acessível por rede privada ou ligação autorizada. Escolha região, espaço, backups e limite de ligações.
-
-Crie uma base exclusiva e um utilizador autorizado a criar/alterar as tabelas. Se usar esquema dedicado, configure o search_path do papel. O modelo SQL contém GRANT para o administrador postgres usado no Supabase; ajuste essa linha se o administrador do seu fornecedor for outro. Não execute comandos anon/authenticated se esses papéis não existem.
-
-```text
-postgresql://utilizador:SEGREDO_CODIFICADO@host:5432/base
+```sql
+REVOKE ALL ON SCHEMA foodtruck FROM anon, authenticated;
 ```
 
-Para API persistente com LISTEN/NOTIFY, use Direct/Session e worker. Com Transaction, use API_UPDATES_MODE=poll. Neste modo há manutenção em pedidos; um worker dedicado permite manutenção sem depender de visitas.
+7. Carregue em Run / Executar. Se aparecer um aviso sobre alterações de permissões, confirme que está no projeto novo criado no capítulo 7 e que copiou este ficheiro.
 
-Não abra PostgreSQL a toda a internet sem necessidade. Use rede privada ou autorize os acessos necessários. Use pg_dump/pg_restore compatíveis e ensaie restauros entre versões. Portabilidade não dispensa testar permissões, TLS e capacidade.
+Como confirmar: aparece uma mensagem de sucesso, sem erro. Não repita este passo se disser que o utilizador ou esquema já existe; pode significar que o passo já foi feito. Não apague os dados para tentar novamente.
 
-## 8. Migrações e primeiro administrador
-Depois de configurar uma base nova:
+Guarde a segunda palavra-passe com a indicação «acesso foodtruck_app». A primeira palavra-passe era do administrador da base; são acessos diferentes.
+
+## 9. Preparar o lugar das imagens
+O Supabase Storage é um armário online para ficheiros. Vamos criar um armário privado para as fotografias enviadas pela gestão.
+
+1. No painel Supabase, abra Storage.
+2. Carregue em New bucket / Novo bucket.
+3. Escreva exatamente foodtruck-media como nome.
+4. Deixe o bucket privado, sem acesso público, e confirme.
+5. Abra Project Settings / Definições do projeto e procure API Keys ou API Keys & JWT.
+6. Localize a chave de servidor chamada service_role ou secret. Copie-a para o seu gestor de palavras-passe.
+7. Não use a chave publishable/anon. Ela é pública e não dá o acesso que a API precisa.
+
+Esta chave permite ao servidor guardar e ler imagens. Não a envie a ninguém, não a coloque nos sites dos clientes ou da gestão e não a guarde no GitHub.
+
+Como confirmar: em Storage aparece foodtruck-media. Não precisa de criar pastas dentro dele; a aplicação trata disso.
+
+## 10. Preparar o email de confirmação
+Brevo envia mensagens quando um cliente cria uma conta ou pede para recuperar a palavra-passe. Sem este passo, essas mensagens não chegam.
+
+1. Abra https://onboarding.brevo.com/account/register e crie uma conta gratuita.
+2. Confirme o email que usou para criar a conta.
+3. No painel Brevo, adicione como remetente o endereço de email que quer usar. Abra a mensagem de verificação e confirme-o.
+4. No Brevo, abra SMTP & API > API Keys.
+5. Carregue em Create a new API key / Criar chave API e dê-lhe um nome, por exemplo Food Truck Live.
+6. Copie a chave mostrada e guarde-a no gestor de palavras-passe. O Brevo pode deixar de a mostrar depois.
+7. Confirme que criou uma chave API. A chave SMTP é diferente e não serve para este campo.
+
+Como confirmar: o remetente aparece verificado e a chave está guardada. A imagem é um exemplo do fornecedor; o painel pode ter outro aspeto.
+
+![Exemplo do guia oficial Brevo: escolher API Keys. É uma ilustração do fornecedor, não a sua conta.](images/instalacao-brevo-api.png)
+Fonte: https://developers.brevo.com/docs/api-key-authentication
+
+![Exemplo do guia oficial Brevo: criar o nome de uma chave. Nunca partilhe o valor da chave.](images/instalacao-brevo-nome-chave.png)
+Fonte: https://developers.brevo.com/docs/api-key-authentication
+
+## 11. Criar as ligações da base de dados
+Uma ligação é como o endereço e a chave que permitem à aplicação encontrar a base de dados. O Supabase mostra esta informação; não invente nem use a ligação de outro projeto.
+
+1. No Supabase, abra Connect / Ligar e escolha Session pooler. «Pooler» é um ponto de ligação que ajuda a gerir muitas ligações ao mesmo tempo.
+2. Escolha o formato URI e copie a ligação para um documento temporário privado.
+3. Substitua a palavra-passe indicada no exemplo pela palavra-passe de foodtruck_app, criada no capítulo 8. Não use a palavra-passe administrativa do projeto.
+4. Na ligação, use o nome de utilizador foodtruck_app no formato indicado pelo painel, mantendo a referência do projeto se ela aparecer.
+5. No Visual Studio Code, abra .env.install. Depois de DATABASE_URL=, cole a ligação.
+6. Depois de DATABASE_MIGRATION_URL=, cole a mesma ligação Session pooler.
+7. Guarde com Ctrl+S no Windows ou Command+S no Mac.
+
+Esta ligação contém a palavra-passe da base. Não a envie por email, chat ou GitHub. Mais tarde vamos copiar também uma ligação Transaction pooler para a API online, se o painel a disponibilizar.
+
+Como confirmar: as duas linhas começam por postgresql:// e já não contêm ALTERAR ou [YOUR-palavra-passe]. Não partilhe uma imagem que mostre o ficheiro.
+
+## 12. Criar as tabelas e a conta de administrador
+«Migração» é a instalação das tabelas e regras da aplicação na base de dados. O comando lê a ligação privada que guardou em .env.install.
+
+No terminal do Visual Studio Code, execute uma instrução de cada vez:
 
 ```sh
-npm run install:check
 npm run db:migrate
-npm run install:doctor
+```
+
+Aguarde pela mensagem de conclusão. Depois execute:
+
+```sh
 npm run db:bootstrap
 ```
 
-db:migrate aplica SQL pendente e regista migrações. Usa DATABASE_MIGRATION_URL se definida; requer ligação estável Direct/Session. install:doctor confirma ligação, esquema e registo de migrações.
+O programa pergunta o email do administrador e o nome da organização. Escreva-os e carregue em Enter. Depois pede uma palavra-passe nova com pelo menos 12 caracteres. Enquanto a escreve, nada aparece no ecrã; é normal. Carregue em Enter quando terminar.
 
-O bootstrap pede email, nome da organização e password oculta num terminal interativo. Aceita 12 a 256 caracteres e guarda hash, sem imprimir o segredo. Para automação, use BOOTSTRAP_EMAIL, BOOTSTRAP_ORGANIZATION e BOOTSTRAP_PASSWORD como variáveis privadas temporárias; retire a password do ambiente quando terminar, sem a escrever no Git ou histórico de comandos.
+Guarde o email e a palavra-passe. Esta será a conta para entrar na gestão Food Truck Live. Não é a conta GitHub, Supabase ou Vercel.
 
-Só funciona se não existem utilizadores, organizações ou negócios. Repetir recusa criar/modificar contas. Não use numa instalação já utilizada. Depois do primeiro login, abra Rede > Negócios e crie a primeira carrinha. Não são copiados dados da instalação de referência.
+Como confirmar: aparece uma mensagem de que o administrador e a organização foram criados. Este comando só funciona uma vez numa base vazia. Não o volte a executar quando já existirem utilizadores ou negócios.
 
-## 9. Armazenamento das imagens
-| Opção | Configuração |
-| Disco | DATA_DIRECTORY num volume persistente; incluir nos backups. |
-| Supabase privado | SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_STORAGE_BUCKET na API. |
-| S3/R2 | S3_BUCKET, S3_ENDPOINT se aplicável, AWS_REGION e credenciais do bucket. |
+Se falhar, não experimente comandos para apagar ou reiniciar a base. Verifique as ligações ou peça ajuda, sem partilhar as palavras-passe.
 
-A prioridade é Supabase quando configurado, depois S3 e finalmente disco. Ao mudar, retire configurações antigas. Copie os objetos mantendo as chaves; criar outro bucket não transfere imagens.
+## 13. Criar a conta Vercel e ligar ao GitHub
+Vercel vai publicar os sites e a API. «Publicar» significa pôr a aplicação acessível na internet.
 
-No Supabase Storage, crie o bucket privado foodtruck-media. Os objetos usam uploads/ e nomes UUID.webp. Não publique a chave de servidor no frontend.
+1. Abra https://vercel.com/signup.
+2. Escolha Continue with GitHub / Continuar com GitHub.
+3. Entre na conta GitHub onde fez o Fork.
+4. Se aparecer um pedido de acesso, autorize o Vercel a ver o repositório foodtruck da sua conta.
+5. Volte ao painel Vercel.
 
-Disco temporário não é persistente. No Vercel, configure storage externo antes de permitir uploads; DATA_DIRECTORY=/tmp/foodtruck é temporário. Teste uma imagem na gestão e no menu público, incluindo depois de nova publicação.
+Como confirmar: consegue abrir o painel e vê o seu nome ou equipa. Vercel não precisa das palavras-passe da base nem da gestão.
 
-## 10. Ativar email com Brevo ou SMTP
-1. Crie uma conta Brevo e confirme o email de acesso.
-2. Adicione e verifique o remetente. Com domínio próprio, configure a autenticação DNS indicada pelo fornecedor.
-3. Em SMTP & API > API Keys, crie uma chave API da instalação. Não use uma chave SMTP em BREVO_API_KEY.
-4. Guarde BREVO_API_KEY como segredo apenas na API.
-5. Defina MAIL_FROM no formato Food Truck Live <confirmacoes@seu-dominio.pt>, com remetente validado.
-6. Publique novamente a API e teste registo, receção, confirmação, login e recuperação.
+## 14. Criar três projetos no Vercel
+A aplicação tem três partes online: a API, o site dos clientes e a gestão. Cada projeto usa uma pasta diferente da mesma cópia GitHub.
 
-Em alternativa, configure SMTP_URL e MAIL_FROM. Se BREVO_API_KEY existir, tem prioridade; retire-a para passar a SMTP.
+Repita Add New > Project / Novo projeto três vezes. Em cada projeto, selecione o repositório foodtruck da sua conta.
 
-«Conta existente» não prova que o email chegou. Use «Reenviar confirmação» com o endereço correto. Veja nos logs Brevo se a mensagem foi aceite, entregue ou devolvida; verifique spam. Um outbox local não envia email. Não confirme contas diretamente na base para contornar configuração incompleta.
+| Nome sugerido | Root Directory / pasta | Framework |
+| API | services/api | Other |
+| foodtruck-clientes | apps/customer | Next.js |
+| foodtruck-gestao | apps/management | Next.js |
 
-O plano gratuito indica 300 envios/dia, partilhados com os restantes envios da conta, sem acumulação. Confirme disponibilidade transacional e limites na sua conta [4].
+«Root Directory» quer dizer a pasta que o Vercel publica. Não deixe os três projetos a usar a pasta principal foodtruck. Nos dois sites, mantenha Build Command como npm run build e Output Directory como .next. A API usa a configuração que já vem na pasta; não escreva .next como saída da API.
 
-![Figura 4. Ecrã SMTP & API do guia oficial Brevo: escolher API Keys e Generate a new API key. Chaves existentes aparecem mascaradas.](images/instalacao-brevo-api.png)
+Se aparecer Include files outside the Root Directory / Incluir ficheiros fora da pasta principal, ative essa opção. Os projetos precisam de ficheiros partilhados que estão noutras pastas.
 
-Fonte: https://developers.brevo.com/docs/api-key-authentication
+O primeiro carregamento pode falhar até configurar os endereços nos capítulos seguintes. Guarde os três projetos na mesma.
 
-![Figura 5. Diálogo de nome da chave no guia oficial Brevo. Crie uma chave própria; nunca a publique nos manuais ou no GitHub.](images/instalacao-brevo-nome-chave.png)
-
-Fonte: https://developers.brevo.com/docs/api-key-authentication
-
-## 11. Percurso A: API no Vercel
-Ligue o seu repositório GitHub ao Vercel. Crie três projetos do mesmo repositório. Primeiro publique a API.
-
-| Definição da API | Valor |
-| Root Directory | services/api |
-| Framework Preset | Other; respeitar o vercel.json incluído. |
-| Node.js | 24.x |
-| Handler | api/index.ts, definido no vercel.json. |
-| Output Directory | Sem override Next.js; não usar .next na API. |
-
-Nas variáveis Production, configure DATABASE_URL (Transaction), DATABASE_CA_CERT_PEM, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_STORAGE_BUCKET, BREVO_API_KEY, MAIL_FROM e DEMO_MODE=0. Use DATA_DIRECTORY=/tmp/foodtruck. A API deteta Vercel e usa atualização periódica.
-
-Defina CUSTOMER_APP_URL, MANAGEMENT_APP_URL e CORS_ORIGINS com os URLs finais dos sites. Se ainda não existem, crie/reserve os projetos e complete estes valores antes dos testes. Nunca deixe example.com.
-
-Aplique migrações e bootstrap da sua máquina com .env.install; a função Vercel não instala a base automaticamente. Conclua Deploy e confirme HTTP 200 em https://SUA-API/api/v1/health. A raiz da API não é uma página de login.
-
-As sessões ficam no PostgreSQL. Password da base e segredos ficam só no projeto da API.
-
-## 12. Percurso A: sites no Vercel
-Importe o mesmo GitHub mais duas vezes como projetos distintos.
-
-| Definição | Clientes | Gestão |
-| Root Directory | apps/customer | apps/management |
-| Framework | Next.js | Next.js |
-| Build Command | npm run build | npm run build |
-| Output Directory | .next | .next |
-| Node.js | 24.x | 24.x |
-| INTERNAL_API_URL | URL HTTPS da API | URL HTTPS da API |
-
-Mantenha package-lock.json na raiz do monorepo. Permita acesso a ficheiros partilhados fora do Root Directory se essa opção for apresentada [6].
-
-INTERNAL_API_URL tem de estar no build e runtime. Depois de mudar essa variável, publique novamente os sites: /api/v1 e /uploads usam esse destino.
-
-Quando souber os dois URLs finais, atualize CUSTOMER_APP_URL, MANAGEMENT_APP_URL e CORS_ORIGINS na API e publique-a novamente. As origens são separadas por vírgula, sem caminho ou barra final.
-
-Entre na gestão com a conta do bootstrap, crie uma carrinha e confirme «Ver página de encomendas». Teste cliente, email, imagem, evento e encomenda antes de divulgar.
-
-NEXT_NO_ROUTES_MANIFEST costuma indicar raiz/framework/output incorretos ou build falhado. Veja a publicação nova, não um link antigo que continua falhado. A raiz geral do repositório não é o Root Directory dos sites.
-
-![Figura 6. Framework Settings, imagem da documentação oficial Vercel. Para esta aplicação, use npm run build e as raízes/output da tabela anterior; não copie os comandos de exemplo da imagem.](images/instalacao-vercel-build.png)
-
+![Exemplo do guia oficial Vercel: campos da configuração de compilação. Use as pastas deste manual, não copie valores da imagem.](images/instalacao-vercel-build.png)
 Fonte: https://vercel.com/docs/builds/configure-a-build
 
-## 13. Percurso B: servidor Docker
-Requer servidor com Docker Engine e Compose v2, espaço para base/imagens e dois domínios seus. Docker Desktop em Windows/macOS permite ensaios; produção pode usar Linux.
+Como confirmar: existem três projetos e cada um indica a pasta certa. Abra cada projeto e copie o endereço que termina em .vercel.app. Anote os três endereços num lugar privado.
 
-Crie .env.install, configure URLs HTTPS, CORS e domínios sem https://. Use POSTGRES_PASSWORD aleatória hexadecimal para evitar problemas na interpolação do URL. A base do Compose é independente de bases locais já existentes.
+## 15. Configurar e publicar a API
+A API é o balcão interno que recebe as ações dos sites. Só a API recebe as chaves privadas da base, das imagens e do email.
+
+1. No Vercel, abra o projeto API > Settings > Environment Variables.
+2. Adicione cada nome da lista abaixo, um de cada vez. Escolha Production no campo Environment. Marque Secret para palavras-passe, chaves e ligações da base.
+3. Para DATABASE_URL, abra Supabase > Connect e copie a ligação Transaction pooler. Se essa opção não aparecer, copie Session pooler. Substitua [YOUR-palavra-passe] pela palavra-passe foodtruck_app e siga o formato de utilizador indicado pelo painel.
+4. Para DATABASE_CA_CERT_PEM, descarregue o certificado de raiz PostgreSQL na página de ligação/SSL do Supabase. Abra o ficheiro com um editor de texto e copie tudo, incluindo BEGIN CERTIFICATE e END CERTIFICATE. Cole o conteúdo completo no Vercel.
+5. Para CUSTOMER_APP_URL e MANAGEMENT_APP_URL, use os dois endereços dos projetos de clientes e gestão anotados no capítulo 14. Escreva https:// antes do endereço.
+6. Em CORS_ORIGINS, escreva os mesmos dois endereços, separados por vírgula. Não inclua caminhos nem barra no fim.
+7. SUPABASE_URL aparece em Supabase > Project Settings > API. Copie esse endereço.
+8. SUPABASE_SERVICE_ROLE_KEY é a chave privada de servidor guardada no capítulo 9. SUPABASE_STORAGE_BUCKET deve ter o valor foodtruck-media.
+9. BREVO_API_KEY é a chave API guardada no Brevo. MAIL_FROM é o remetente que verificou; por exemplo Food Truck Live <email-verificado@exemplo.pt>.
+10. Adicione DEMO_MODE com o valor 0.
+
+Nomes a configurar: DATABASE_URL, DATABASE_CA_CERT_PEM, CUSTOMER_APP_URL, MANAGEMENT_APP_URL, CORS_ORIGINS, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_STORAGE_BUCKET, BREVO_API_KEY, MAIL_FROM e DEMO_MODE. Não ponha chaves privadas nos projetos dos sites.
+
+![Exemplo do painel de variáveis do Vercel. Os valores da imagem são exemplos; nunca os copie como segredos.](images/instalacao-vercel-variaveis.png)
+Fonte: https://vercel.com/docs/environment-variables
+
+Abra Deployments e escolha Redeploy na publicação mais recente. Aguarde até o estado ser Ready / Pronto.
+
+Como confirmar: abra https://O-SEU-ENDERECO-DA-API.vercel.app/api/v1/health. Deve aparecer uma resposta com ok true. A página principal da API não tem menu nem formulário de login.
+
+## 16. Publicar o site dos clientes
+O site dos clientes tem de saber o endereço da API para ir buscar menus e enviar encomendas.
+
+1. No Vercel, abra foodtruck-clientes > Settings > Environment Variables.
+2. Crie INTERNAL_API_URL com o endereço HTTPS da API, por exemplo https://foodtruck-api.vercel.app. Use o seu endereço real, não este exemplo.
+3. Escolha Production e guarde.
+4. Abra Deployments e carregue em Redeploy para compilar o site com o novo endereço.
+5. Espere até aparecer Ready / Pronto.
+
+Como confirmar: abra o endereço .vercel.app de foodtruck-clientes. Deve carregar a página inicial.
+
+Se surgir NEXT_NO_ROUTES_MANIFEST, confirme Root Directory=apps/customer, framework Next.js e Output Directory=.next. Abra os detalhes da compilação e leia a primeira mensagem de erro.
+
+## 17. Publicar a gestão
+Faça o mesmo para o projeto de gestão.
+
+1. Abra foodtruck-gestao > Settings > Environment Variables.
+2. Crie INTERNAL_API_URL com o endereço HTTPS da API.
+3. Escolha Production, guarde e abra Deployments.
+4. Carregue em Redeploy e aguarde por Ready / Pronto.
+
+Como confirmar: o endereço .vercel.app da gestão mostra o início de sessão. Se der erro de ligação, verifique o endereço da API e confirme que o projeto da API está Ready.
+
+No Vercel, confirme Root Directory=apps/management, framework Next.js e Output Directory=.next. Se aparecer NEXT_NO_ROUTES_MANIFEST, abra o registo de compilação para encontrar o primeiro erro; a mensagem final, sozinha, não explica a causa.
+
+## 18. Atualizar endereços e testar
+Volte ao projeto API e confirme que CUSTOMER_APP_URL, MANAGEMENT_APP_URL e CORS_ORIGINS contêm os endereços finais dos dois sites. Se os endereços mudaram, atualize-os e publique a API novamente.
+
+1. Abra o endereço da gestão e entre com o email e a palavra-passe que criou no capítulo 12.
+2. Na área Rede, abra Negócios e crie a primeira carrinha.
+3. No site dos clientes, confirme que a página pública abre depois de publicar a carrinha.
+4. Crie uma conta de cliente de teste com um email seu. Confirme que recebe o email do Brevo e abra a ligação de confirmação.
+5. Na gestão, carregue uma imagem. Atualize a página e confirme que ela continua visível.
+6. Faça uma encomenda de ensaio e confirme que aparece na gestão.
+
+Se o email não chegar, verifique spam, remetente verificado, MAIL_FROM e chave API Brevo. Se Vercel mostrar Build Error, abra a publicação, procure a primeira mensagem vermelha e confirme que as variáveis foram guardadas para Production.
+
+Como confirmar: consegue entrar na gestão e completar uma encomenda de teste. Apague os dados de ensaio pela aplicação se não os quiser manter.
+
+## 19. Cloudflare para um endereço próprio e servidor Docker
+Esta alternativa usa Cloudflare para o domínio e Docker num servidor Linux. Cloudflare não fornece o servidor nem substitui o Supabase. Docker cria uma base PostgreSQL própria; este percurso é uma instalação separada e pode ter custos.
+
+Docker empacota a aplicação para os serviços arrancarem juntos. Um servidor é um computador ligado à internet continuamente. Se estes termos são novos, siga o caminho Vercel dos capítulos anteriores ou peça a um técnico para preparar o servidor.
+
+1. Crie uma conta Cloudflare e adicione o seu domínio. Alugue um servidor Linux que permita Docker Engine e Docker Compose v2.
+2. No painel Cloudflare, crie dois registos DNS do tipo A: clientes e gestao. Em cada um, escreva o endereço IP público que o fornecedor deu ao servidor. DNS é a lista que encaminha as pessoas para o servidor correto.
+3. Descarregue os ficheiros Food Truck Live para o servidor e extraia-os numa pasta. Peça ao fornecedor para instalar Docker Engine e Compose v2 se ainda não existirem.
+4. Na pasta principal, crie .env.install através dos passos 4 a 6. Preencha BREVO_API_KEY e MAIL_FROM com os dados do capítulo 10; CUSTOMER_APP_URL e MANAGEMENT_APP_URL com os endereços https:// escolhidos; CORS_ORIGINS com esses dois endereços separados por vírgula.
+5. Substitua POSTGRES_PASSWORD=ALTERAR por uma palavra-passe aleatória. Substitua CUSTOMER_DOMAIN e MANAGEMENT_DOMAIN por nomes sob o seu domínio, por exemplo clientes.exemplo.pt e gestao.exemplo.pt.
+6. No terminal, abra a pasta principal e execute uma linha de cada vez:
 
 ```sh
 docker compose --env-file .env.install -f compose.install.yaml config --quiet
 docker compose --env-file .env.install -f compose.install.yaml up -d --build
 ```
 
-O Compose cria PostgreSQL 17, API, worker, sites e Caddy. A API aplica migrações no arranque; os volumes conservam base, imagens e certificados. O gateway recebe 80/443.
-
-Quando os serviços estiverem saudáveis, crie o administrador:
+7. Quando os serviços estiverem ligados, crie o administrador:
 
 ```sh
 docker compose --env-file .env.install -f compose.install.yaml run --rm api node scripts/bootstrap-network.mjs
 ```
 
-O terminal pede credenciais; não escreva a password na linha de comando. Consulte estado e logs com os mesmos parâmetros --env-file e -f, seguidos de ps ou logs --tail 100 api.
+O terminal pede email, nome da organização e palavra-passe. A palavra-passe não aparece enquanto escreve. Os volumes Docker guardam a base e as imagens; não execute comandos que removam volumes. Faça cópias de segurança antes de abrir ao público.
 
-Não exponha PostgreSQL no router. Não execute down -v com dados: essa opção elimina volumes. A receita usa base interna; só mudar DATABASE_URL no ficheiro não altera o override do Compose. Para base externa, adapte serviços/dependências ou use Node.js genérico.
+Cloudflare deve usar SSL/TLS Full (strict) quando o servidor tem HTTPS válido. Não use Flexible nem cache geral para encomendas, contas ou /api/v1.
+## 20. Cloudflare Workers para os sites
+Workers é uma forma de executar os sites na rede Cloudflare. É mais avançada do que Vercel e não substitui a API Node.js nem PostgreSQL. Mantenha a API no Vercel e os dados no Supabase, a menos que um técnico configure outro servidor.
 
-## 14. Cloudflare: DNS e proteção do Docker
-Os serviços continuam no seu servidor. Cloudflare gere DNS e, se ativado, proxy/proteção; não é necessário converter a API em Worker.
+Use esta opção só depois de o site funcionar no Vercel. Requer comandos no terminal e confirmação de que a pré-visualização está correta.
 
-1. Adicione o domínio ao Cloudflare e conclua a configuração DNS.
-2. Crie A/AAAA para os subdomínios clientes/gestão, apontando ao IP público do servidor.
-3. Confirme portas 80/443 livres e acessíveis.
-4. Para emitir os certificados Caddy, pode começar em DNS only, aguardar a emissão e testar HTTPS direto.
-5. Se ativar o proxy, use SSL/TLS Full (strict), com certificado válido na origem. Evite Flexible.
-6. Não aplique cache geral a /api/v1, login, conta ou encomendas.
-7. Teste login, disponibilidade, imagem e encomenda no domínio final.
+1. Abra a pasta do projeto no Visual Studio Code e abra Terminal > New Terminal.
+2. Substitua o endereço abaixo pelo domínio real da sua API e execute:
 
-DNS Free não inclui uma máquina Linux ou PostgreSQL gratuito. O servidor tem os seus custos e manutenção. Cloudflare Pro para o site e Workers Paid são produtos diferentes.
+```sh
+npm run cloudflare:prepare -- customer https://SUA-API.vercel.app
+```
 
-Esta é a opção mais direta para manter a aplicação completa em Docker e usar Cloudflare no domínio.
+3. Aguarde que as ferramentas sejam instaladas. Depois execute:
 
-## 15. Percurso C: clientes em Workers
-Foram incluídos modelos e comando de preparação. Valide no runtime Workers antes de produção: não foi ativada conta nem feita publicação Cloudflare nesta preparação.
-
-Mantenha a API Fastify em Vercel ou outro Node.js. Os sites Workers acedem por HTTPS. Dependências e tratamento de imagem da API não são convertidos por copiar services/api para um Worker.
-
-OpenNext declara suporte a Next.js 16 [7]. A documentação Cloudflare pode apresentar outras ferramentas; a opção fornecida conserva Next.js. Confirme as versões e execute preview. Se as ferramentas tiverem limitações no Windows, use WSL2/Linux.
-
-Em PowerShell, configure também o URL no ambiente do build:
-
-```powershell
-$env:INTERNAL_API_URL='https://SUA-API.example.com'
-npm run cloudflare:prepare -- customer https://SUA-API.example.com
+```sh
 npm run cf:build --workspace=food-truck-customer
 npm run cf:preview --workspace=food-truck-customer
 ```
 
-Em Bash, comece com export INTERNAL_API_URL='https://SUA-API.example.com'. O prepare instala @opennextjs/cloudflare e wrangler no workspace, copia configurações e acrescenta comandos cf. Altera package.json/lock da sua cópia; não publica e não substitui wrangler.json existente.
-
-Depois de o preview passar:
+4. Se a pré-visualização mostrar erros, pare e peça ajuda. Se estiver correta, ligue a conta Cloudflare ao terminal:
 
 ```sh
 npx wrangler login
+```
+
+5. Publique o site dos clientes:
+
+```sh
 npm run cf:deploy --workspace=food-truck-customer
 ```
 
-![Figura 7. Autorização de repositórios GitHub, ilustrada no guia oficial Cloudflare Workers. Autorize apenas o repositório necessário.](images/instalacao-cloudflare-repositorio.png)
-
-Fonte: https://developers.cloudflare.com/workers/ci-cd/builds/git-integration/github-integration/
-
-## 16. Workers: gestão e GitHub
-Repita para o segundo site:
+6. Repita o processo para a gestão:
 
 ```sh
-npm run cloudflare:prepare -- management https://SUA-API.example.com
+npm run cloudflare:prepare -- management https://SUA-API.vercel.app
 npm run cf:build --workspace=food-truck-management
 npm run cf:preview --workspace=food-truck-management
 npm run cf:deploy --workspace=food-truck-management
 ```
 
-Cada site tem Worker/nome próprios, saída .open-next e flags nodejs_compat/global_fetch_strictly_public. WORKER_SELF_REFERENCE deve usar o mesmo nome. Nunca coloque credenciais de base/Brevo nos sites.
+A Cloudflare pede autorização para publicar. Não coloque palavras-passe ou chaves da base, Supabase ou Brevo nos projetos dos sites. Só a API guarda essas chaves.
 
-Para GitHub em Workers Builds, ligue o repositório e use raiz do monorepo, instalação npm ci, variável de build INTERNAL_API_URL, build npm run cf:build --workspace=food-truck-customer e deploy npm run cf:deploy --workspace=food-truck-customer. Repita para o workspace da gestão. Envie primeiro as alterações do prepare para o seu GitHub.
-
-Configure workers.dev ou domínios personalizados. Atualize URLs e CORS na API externa, publique-a e teste sessões através dos sites finais.
-
-Não escolha HTML estático ou next-on-pages como substituição automática deste percurso dinâmico. Se preview falhar, corrija antes de publicar; Node/Docker continua disponível. Workers Free pode não ter CPU suficiente para páginas dinâmicas: avalie com carga real.
-
-![Figura 8. Exemplo de verificações do build publicado no guia Cloudflare Workers. Confirme os resultados antes de usar uma publicação.](images/instalacao-cloudflare-builds.png)
-
+![Exemplo do guia oficial Cloudflare Workers: autorizar acesso ao repositório GitHub. Autorize só a sua cópia.](images/instalacao-cloudflare-repositorio.png)
 Fonte: https://developers.cloudflare.com/workers/ci-cd/builds/git-integration/github-integration/
 
-## 17. R2 para imagens, mantendo PostgreSQL
-R2 é armazenamento de objetos, não a base relacional. Pode substituir o bucket de imagens e manter PostgreSQL no fornecedor escolhido.
+![Exemplo do guia oficial Cloudflare Workers: verificações da compilação. A interface pode mudar.](images/instalacao-cloudflare-builds.png)
+Fonte: https://developers.cloudflare.com/workers/ci-cd/builds/git-integration/github-integration/
 
-1. Crie bucket R2 privado e credenciais S3 limitadas a leitura/escrita desse bucket.
-2. Na API, defina S3_BUCKET, S3_ENDPOINT com o endpoint S3 do painel, AWS_REGION=auto, AWS_ACCESS_KEY_ID e AWS_SECRET_ACCESS_KEY.
-3. Retire SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY da configuração se pretende que R2 seja o destino ativo.
-4. Copie objetos existentes preservando uploads/NOME.webp; confira contagem e amostras.
-5. Publique a API, carregue uma imagem e confirme nos sites.
+O plano gratuito tem limites de processamento e pedidos. Este guia não publica a sua conta Cloudflare: confirme build, pré-visualização e funcionamento real antes de abrir os sites aos clientes.
 
-O bucket pode ser privado: a API serve /uploads com as credenciais do servidor. Nunca coloque essas credenciais no navegador. Um dump PostgreSQL contém referências às imagens, não os ficheiros. O ZIP também não exporta automaticamente o bucket operacional.
+## 21. Gratuito ou pago: qual a diferença
+Estes limites foram consultados em 3 de novembro de 2026. Os preços são em dólares dos EUA, podem mudar e podem não incluir impostos, domínio ou utilização acima dos limites. Confirme sempre os valores no site oficial antes de contratar.
 
-R2 tem franquias e cobrança por armazenamento/operações; consulte preços de Standard e restantes classes [8]. Gratuito não significa ilimitado ou dispensa de método de pagamento.
+| Serviço | Plano gratuito | Plano pago e diferença |
+| Supabase | Até 500 MB de base, 1 GB de ficheiros e possibilidade de pausa após uma semana com pouca atividade. Adequado para aprender e testar. | Pro começa em 25 USD/mês; aumenta os limites e inclui cópias diárias da base por 7 dias. Uso acima do limite pode aumentar a fatura. |
+| Vercel | Hobby é gratuito e reservado a uso pessoal, não comercial. Tem limites de utilização. | Pro destina-se a projetos profissionais e comerciais. Começa em cerca de 20 USD/mês, sujeito ao uso e número de membros. |
+| Brevo | Até 300 emails por dia; os emails gratuitos podem incluir a marca Brevo. | Mais capacidade e opções conforme o plano. O plano pago não garante que as mensagens não sejam marcadas como spam. |
+| Cloudflare Workers | Até 100 000 pedidos por dia e 10 ms de processamento por pedido. | Workers Paid começa em 5 USD/mês e oferece limites maiores. Não inclui a base de dados. |
+| Docker num servidor | O programa Docker é gratuito, mas é preciso um computador servidor sempre ligado. | O servidor, cópias e domínio podem ter custo. Alguém tem de manter o sistema atualizado. |
 
-## 18. Percurso D: Node.js genérico
-Num fornecedor Node.js 24, instale npm ci --include=dev e configure base, storage e variáveis. Em serviços separados, use caminhos absolutos para DATA_DIRECTORY e DATABASE_CA_CERT_FILE. Com .env.install:
+Gratuito ajuda a aprender e testar, mas pode ter limites, pausas e menos suporte. Pago pode trazer mais capacidade e continuidade, mas não corrige erros de configuração.
+
+Antes de aceitar encomendas comerciais, confirme os termos do Vercel Hobby: o fornecedor indica que este plano é para uso pessoal e não comercial.
+
+Fontes oficiais sobre limites e preços:
+
+- Supabase: https://supabase.com/pricing e https://supabase.com/kb/faqs/platform/free-project-pausing
+- Vercel: https://vercel.com/docs/plans/hobby e https://vercel.com/pricing
+- Brevo: https://help.brevo.com/hc/en-us/articles/208580669-FAQs-What-are-the-limits-of-the-Free-plan
+- Cloudflare Workers: https://developers.cloudflare.com/workers/platform/pricing/ e https://developers.cloudflare.com/workers/platform/limits/
+
+## 22. Utilizar outro serviço de base de dados
+A aplicação precisa de PostgreSQL. «Base de dados» é o arquivo; PostgreSQL é o tipo de programa que entende as instruções usadas pela aplicação.
+
+Pode escolher outro fornecedor se ele disponibilizar PostgreSQL, ligação segura pela internet, cópias de segurança e espaço suficiente. Crie uma base exclusiva para a aplicação e use deployment/postgres-bootstrap.sql.example para criar a divisão e o acesso.
+
+O fornecedor pode mostrar nomes diferentes para o endereço, certificado e utilizador. Siga os dados que aparecem no painel dele. O ficheiro SQL contém duas linhas próprias do Supabase, com os nomes anon e authenticated; retire essas linhas se o seu fornecedor de PostgreSQL não as tiver.
+
+MySQL, MariaDB, SQL Server, SQLite e Cloudflare D1 são diferentes de PostgreSQL. Não os escolha como substitutos: a aplicação não está preparada para os usar sem alterações no programa.
+
+Se não sabe criar utilizadores, certificados ou ligações de rede, peça ao fornecedor ou a um técnico que prepare esta ligação. Não abra a base de dados para toda a internet.
+
+## 23. Instalar num alojamento que aceite Node.js
+Esta opção serve para outros fornecedores de alojamento. Antes de pagar, pergunte ao fornecedor se o serviço executa Node.js 24 durante todo o dia, aceita PostgreSQL, permite manter quatro serviços a funcionar e dá armazenamento persistente ou ligação a Supabase Storage.
+
+Node.js executa a aplicação. PostgreSQL guarda os dados. O armazenamento persistente conserva imagens após reinícios. HTTPS protege a ligação. Um «proxy» encaminha clientes para o site certo; este projeto inclui uma configuração Caddy, mas o fornecedor tem de permitir usá-la.
+
+Se o fornecedor só aceita PHP, HTML estático, ou um único comando sem processos contínuos, não serve para esta instalação completa. Use Vercel ou Docker em servidor próprio.
+
+1. Confirme os requisitos com o fornecedor antes de criar a conta.
+2. Descarregue os ficheiros como explicado nos capítulos 3 a 6.
+3. Prepare PostgreSQL, imagens e email como nos capítulos 7 a 10.
+4. Abra .env.install e substitua os valores de exemplo pelas ligações e domínios fornecidos. Preencha também SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_STORAGE_BUCKET=foodtruck-media, BREVO_API_KEY e MAIL_FROM usando os valores dos capítulos 9 e 10. Nunca carregue este ficheiro para GitHub.
+5. No terminal, execute um comando de cada vez:
 
 ```sh
 npm run install:check
 npm run db:migrate
+npm run install:doctor
 npm run db:bootstrap
 npm run build:install
 npm start
 ```
 
-npm start supervisiona API, worker e sites num servidor persistente. Não é o comando para Vercel Functions/Workers. Use um gestor de serviços para reinício e logs.
+O primeiro comando confirma se os endereços estão preenchidos. O segundo cria as tabelas. O terceiro testa a ligação. O quarto cria o administrador, apenas na primeira instalação. O quinto compila os três serviços. O último mantém API, sites e atualizações a funcionar.
 
-Separadamente: compile a API com npm run build --workspace=@foodtruck/api e execute npm run start --workspace=@foodtruck/api; execute npm run worker --workspace=@foodtruck/api num serviço próprio. Compile cada site com INTERNAL_API_URL no ambiente e execute o seu start com a porta atribuída.
+6. Peça ao fornecedor ou técnico para apontar os domínios HTTPS para este servidor e configurar Caddy ou outro proxy para encaminhar o site de clientes, gestão, /api/v1 e /uploads.
+7. Abra os três endereços e faça o ensaio descrito no capítulo 18.
 
-Use proxy HTTPS à frente dos sites. Cookies Secure em produção exigem HTTPS; HTTP simples não é teste válido de login. Caddyfile.network exemplifica dois domínios e as rotas /api/v1 e /uploads. Nginx ou outro proxy pode fazer o mesmo, preservando cookies, métodos e corpos HTTP. Não exponha portas internas sem necessidade.
+Como confirmar: os sites abrem por HTTPS, /api/v1/health mostra ok true, uma imagem continua visível depois de reiniciar e uma encomenda de teste chega à gestão.
 
-Streams exigem ligação adequada e proxy sem buffering; em alternativa use API_UPDATES_MODE=poll. Só ter o nome de um fornecedor não garante compatibilidade: confirme processos Node, versões, rede, disco e limites.
+Este caminho precisa que o fornecedor configure processos e encaminhamento. Se não souber confirmar esses requisitos, envie-lhe este capítulo antes de contratar e peça confirmação escrita.
+## 24. Guardar cópias de segurança
+Uma cópia de segurança é uma segunda cópia dos dados, guardada à parte. Serve para recuperar informação se houver falha, engano ou mudança de fornecedor.
 
-## 19. Gratuito ou pago
-Limites consultados em 3 de novembro de 2026. USD sem impostos, câmbio, domínios e excedentes. Confirme sempre preço/condições antes de contratar.
+1. No Supabase, confirme no seu plano se há cópias automáticas e quantos dias ficam guardadas.
+2. Antes de alterações importantes, faça também uma cópia adicional. O projeto inclui o comando `npm run backup`, mas este requer ferramentas PostgreSQL e uma ligação privada configurada.
+3. A cópia da base não inclui automaticamente fotografias que estejam no Supabase Storage ou R2. Copie esses ficheiros separadamente.
+4. Guarde as cópias num local diferente do servidor, com acesso limitado. Podem incluir nomes, emails e encomendas.
+5. Experimente abrir uma cópia num projeto de teste. Uma cópia só é útil se puder ser restaurada.
 
-| Serviço | Gratuito | Pago e consequência |
-| Supabase | 500 MB base, 1 GB ficheiros; pode pausar após semana inativa. | Pro desde 25 USD/mês, mais capacidade e backups diários retidos 7 dias; podem acrescer consumos/projetos. [1] |
-| Vercel | Hobby: uso pessoal não comercial; útil para ensaios e GitHub. | Pro para trabalho profissional/comercial; preço anunciado desde 20 USD/mês, com condições por lugar/consumo. Confirmar orçamento. [2][3] |
-| Workers | 100 000 pedidos/dia e 10 ms CPU/pedido, partilhados na conta. | Workers Paid desde 5 USD/mês, com franquias/excedentes e mais CPU. Não inclui PostgreSQL. [5] |
-| Brevo | 300 emails/dia; pode limitar confirmações. | Mais volume segundo oferta contratada; não garante entrega na caixa principal. [4] |
-| Docker | Software pode ser gratuito; máquina, disco e rede têm custos. | VPS/servidor e backups ao preço do fornecedor; controlo com responsabilidade de manutenção. |
+A pasta UPLOADS que vem com o projeto contém recursos para inserir manualmente na aplicação. Não é a cópia das imagens operacionais que clientes e gestores carregam.
 
-Grátis favorece ensaios de baixo tráfego, mas pode ter pausas, quotas e menos apoio. Pago pode aumentar capacidade, continuidade, backups e suporte; não corrige configurações erradas.
+## 25. Atualizar a aplicação
+Uma atualização substitui ficheiros do programa; não deve apagar a base de dados nem as imagens.
 
-Some os três componentes web/API, base, imagens, email, domínio e backups. Use alertas e limites de despesa. Outros projetos da mesma conta podem consumir as mesmas quotas. Não escolha o conjunto apenas pela frase «site grátis».
+1. Antes de atualizar, faça uma cópia da base e das imagens.
+2. Atualize os ficheiros da sua cópia GitHub, ou descarregue uma nova versão e compare as alterações.
+3. No computador, abra a pasta atualizada no Visual Studio Code.
+4. No terminal, execute `npm ci --include=dev` para atualizar as peças de software.
+5. Execute `npm run db:migrate` para acrescentar à base as alterações necessárias.
+6. No Vercel, abra cada projeto e escolha Deployments > Redeploy. Noutro alojamento, siga o processo de publicação desse fornecedor.
+7. Teste login, menu, imagens, email e uma encomenda antes de anunciar a atualização.
 
-## 20. Testar antes de abrir ao público
-Use dados seus e uma carrinha de teste, em ambiente separado quando possível.
+Não execute db:bootstrap numa atualização. Esse comando cria a primeira conta apenas numa base nova e vazia.
 
-1. API health: HTTP 200; doctor encontra base e migrações.
-2. Login da gestão no domínio final e utilizador correto.
-3. Criar negócio e verificar slug/menu público.
-4. Fotografias e logo persistem depois de nova publicação.
-5. Ingrediente, produto e receita apresentam stock/disponibilidade corretos.
-6. Evento publicado tem hora/coordenadas e aparece atual ou próxima paragem.
-7. Cliente recebe confirmação, confirma, entra e recupera password.
-8. Encomenda mostra número, acompanhamento e associação à conta.
-9. Estados, recolha e pagamento funcionam conforme a operação real.
-10. Atual/Touch funciona nas quatro áreas e após recarregar.
-11. Excel descarrega e abre.
-12. Backup é restaurado com sucesso numa base separada.
+## 26. Resolver problemas comuns
+Leia a primeira mensagem de erro que aparece. A última frase pode ser apenas um resumo.
 
-Vercel/Supabase/Brevo são o percurso usado na referência. O bootstrap novo foi testado em esquema isolado e a API compilada. Não há Docker disponível neste computador e não foi feita publicação Workers nesta preparação; valide esses destinos antes de produção.
+| Mensagem ou situação | O que verificar |
+| «node não é reconhecido» | Node.js 24 foi instalado? Feche e volte a abrir o Visual Studio Code. |
+| Ligação à base falha | O projeto Supabase está ativo? Copiou a ligação do seu painel? A palavra-passe é de foodtruck_app? |
+| Falta uma tabela ou aparece permission denied | O SQL do capítulo 8 e npm run db:migrate terminaram sem erros? |
+| Vercel mostra NEXT_NO_ROUTES_MANIFEST | Clientes: apps/customer. Gestão: apps/management. Framework Next.js e saída .next. Leia a primeira mensagem do Build Log. |
+| Página abre, mas dá erro de ligação | INTERNAL_API_URL nos sites é o endereço certo da API? A API está Ready? /api/v1/health responde? |
+| Origin not allowed | CUSTOMER_APP_URL, MANAGEMENT_APP_URL e CORS_ORIGINS têm os domínios finais sem caminhos ou barra final? Volte a publicar a API. |
+| Imagem desaparece após publicar | SUPABASE_URL, chave de servidor e bucket foodtruck-media estão no projeto API? |
+| Email não chega | Remetente Brevo verificado? Criou uma chave API, e não chave SMTP? Verifique spam e o painel Brevo. |
+| Sessão deixa de funcionar | Use HTTPS, o endereço final e um navegador atualizado. Verifique se os cookies não estão bloqueados. |
 
-## 21. Backup e restauro
-Instale pg_dump/pg_restore compatíveis. Use DATABASE_MIGRATION_URL Direct/Session, DATABASE_CA_CERT_FILE se necessário e BACKUP_SCHEMA=foodtruck no Supabase para copiar só esse esquema.
+Ao pedir ajuda, indique o passo, a mensagem e a hora. Não partilhe capturas que mostrem passwords, chaves, endereços privados da base ou dados de clientes.
 
-```sh
-npm run backup
-```
+## 27. Cloudflare para um domínio, mantendo Vercel e Supabase
+Pode comprar um domínio e usar Cloudflare para encaminhar esse endereço, mantendo os sites no Vercel e os dados no Supabase. Esta é a opção Cloudflare mais simples; não requer Workers nem Docker.
 
-O comando cria dump em data/backups e copia imagens locais. Com Supabase/S3/R2, avisa que objetos externos não estão incluídos: copie-os separadamente. Preserve também recursos UPLOADS desejados.
+1. Compre um domínio num fornecedor de domínios.
+2. Crie uma conta Cloudflare e escolha Add a site / Adicionar site.
+3. Escreva o domínio e siga as instruções para confirmar os registos DNS. DNS é uma lista de endereços que encaminha as pessoas para o site correto.
+4. No Cloudflare, crie os registos para clientes e gestão conforme as instruções atuais do Vercel.
+5. No Vercel, abra cada projeto, Settings > Domains, e adicione o domínio correspondente.
+6. Aguarde a confirmação dos dois serviços e teste os endereços HTTPS.
+7. Na API, atualize CUSTOMER_APP_URL, MANAGEMENT_APP_URL e CORS_ORIGINS para os novos domínios e volte a publicar a API.
 
-Guarde cópias cifradas fora do servidor, com retenção e acesso limitado. Teste o restauro: um ficheiro existente não garante recuperação. Backups de base do fornecedor não substituem a estratégia para imagens e configuração.
+Cloudflare não aloja a base neste percurso. O domínio tem um custo anual no fornecedor escolhido; o plano Cloudflare gratuito não inclui o preço do domínio.
 
-Para restaurar, crie destino vazio e papel/esquema apropriados. Execute pg_restore --no-owner --no-acl no dump, com PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE e TLS definidos privadamente. Não escreva passwords em comandos partilhados. O esquema do dump tem de corresponder ao search_path do papel.
+## 28. O que guardar no fim da instalação
+Anote num lugar privado:
 
-Restaure também os objetos com as mesmas chaves. Aponte uma instalação de ensaio ao destino, execute diagnóstico e confirme negócios, produtos, imagens e encomendas. Planeie só depois a troca do serviço ativo.
+- Endereço público dos clientes, da gestão e da API.
+- Email e palavra-passe do administrador da gestão.
+- Conta GitHub que contém a sua cópia do projeto.
+- Conta Supabase e região onde estão os dados.
+- Conta Brevo e remetente verificado.
+- Onde estão guardadas as palavras-passe e chaves privadas.
+- Como fazer e restaurar cópias de segurança.
+- Plano escolhido e limites que deve vigiar.
 
-Não use --clean, DROP ou remoção de volumes sobre produção sem plano de recuperação e autorização concreta. Instalação e restauro são operações diferentes.
+Crie uma conta separada para cada pessoa que vai gerir o negócio. Dados de clientes e encomendas são privados. Limite os acessos e termine sessão nos computadores partilhados.
 
-## 22. Migrar de fornecedor e atualizar
-Prepare o destino mantendo a origem. Instale inicialmente a mesma versão do código.
+A aplicação web não inclui pagamentos com cartão nem faturação fiscal certificada. Essas funções precisam de integrações próprias.
 
-1. Faça backup completo e restauro de ensaio.
-2. Configure segredos no destino sem os enviar ao GitHub.
-3. Copie PostgreSQL, preservando esquema/search_path.
-4. Copie imagens, conferindo nomes e contagens.
-5. Reserve janela sem novas escritas para cópia final; não deixe duas bases independentes a receber encomendas.
-6. Atualize domínios, CORS e URLs de email; recompile os sites se a API mudou.
-7. Teste tudo, acompanhe logs e preserve a origem até validar a troca.
+## 29. Referências oficiais para as imagens e instruções
+As imagens de fornecedores são exemplos publicados nas páginas oficiais, não capturas da sua conta. Os botões podem mudar. Abra as páginas seguintes para ver a documentação original.
 
-Numa atualização, faça backup e ensaie em staging. Reveja alterações; execute git pull, npm ci, db:migrate e build:install, e reinicie conforme o alojamento. No Vercel, o push pode publicar automaticamente, mas migrar a base é etapa separada.
+- GitHub: https://github.com/aimiguelazio01/foodtruck
+- Supabase, ligação PostgreSQL e certificado: https://supabase.com/docs/guides/database/connecting-to-postgres
+- Brevo, criar uma chave API: https://developers.brevo.com/docs/api-key-authentication
+- Vercel, variáveis: https://vercel.com/docs/environment-variables
+- Vercel, configuração de compilação: https://vercel.com/docs/builds/configure-a-build
+- Cloudflare, ligar GitHub a Workers: https://developers.cloudflare.com/workers/ci-cd/builds/git-integration/github-integration/
 
-Não repita db:bootstrap. Rollback de código não desfaz migração de base; avalie a compatibilidade antes de voltar a uma versão.
-
-## 23. Resolver erros de instalação
-| Sintoma | Verificação |
-| NEXT_NO_ROUTES_MANIFEST | Raiz dos sites, preset Next.js, output .next e erro anterior do build. |
-| Página não carrega | API/rewrite para localhost, base pausada, variável alterada sem rebuild. |
-| Origin not allowed | CORS_ORIGINS com os domínios finais; publicar API. |
-| Sessão desaparece | HTTPS, cookie, proxy e domínio; produção em HTTP não serve. |
-| Tabela inexistente | Migração ausente ou search_path errado. |
-| Too many clients | Pool/limite de ligações; serverless Transaction + poll, sem LISTEN permanente. |
-| Certificado inválido | Certificado oficial, hostname e TLS; não desativar validação. |
-| Imagem desaparece | Disco efémero ou objetos não copiados. |
-| Email não chega | Chave API versus SMTP, remetente, logs, limite e spam. |
-| Evento sem pin | Publicação, data/hora e coordenadas guardadas. |
-| Workers preview falha | Versões, adaptador, flags e limites; corrigir antes do deploy. |
-
-Comece por install:check, install:doctor e logs do componente que falha. Registe hora e ação, sem partilhar segredos.
-
-## 24. Entrega e referências
-Entregue URLs, conta individual do administrador, repositório da organização, local privado dos segredos, fornecedores/planos, rotina de backup/restauro e suporte. Registe versão/commit, região, data e orçamento. A conta pessoal do instalador não deve ser o único proprietário.
-
-Dados de clientes e encomendas são privados; controle acessos a dumps/Excel e retenção. Pagamento online e faturação fiscal exigem integrações adicionais, não ativadas pelo instalador.
-
-Fontes oficiais consultadas:
-
-[1] Planos Supabase: https://supabase.com/pricing
-
-[2] Vercel Hobby: https://vercel.com/docs/plans/hobby
-
-[3] Preços Vercel: https://vercel.com/pricing
-
-[4] Brevo Free: https://help.brevo.com/hc/en-us/articles/208580669-FAQs-What-are-the-limits-of-the-Free-plan
-
-[5] Workers: https://developers.cloudflare.com/workers/platform/pricing/ e https://developers.cloudflare.com/workers/platform/limits/
-
-[6] Monorepos Vercel: https://vercel.com/docs/monorepos
-
-[7] OpenNext: https://opennext.js.org/cloudflare/get-started e https://opennext.js.org/cloudflare
-
-[8] R2: https://developers.cloudflare.com/r2/pricing/
-
-[9] Ligações PostgreSQL: https://supabase.com/docs/guides/database/connecting-to-postgres
-
-[10] Cloudflare Next.js e D1: https://developers.cloudflare.com/workers/framework-guides/web-apps/nextjs/ e https://developers.cloudflare.com/d1/
-
-Reconfirme preços na contratação. Os exemplos não prometem custo zero ou capacidade ilimitada.
-
+Os fornecedores podem alterar menus, limites e preços. Confirme a informação no próprio painel antes de contratar ou publicar.

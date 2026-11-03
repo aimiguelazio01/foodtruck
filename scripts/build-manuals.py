@@ -107,4 +107,4 @@ def build(source,filename,title,subtitle):
   story.append(Paragraph(markup(line),styles['body']));i+=1
  doc=Manual(OUT/filename,title);doc.multiBuild(story);shutil.copy2(OUT/filename,ROOT/'docs/manuals'/filename);print(filename,doc.page,'pages')
 build(ROOT/'docs/manuals/UTILIZACAO_PT.md','Manual_Food_Truck_Live_PT.pdf','Manual de utilização','Do primeiro negócio à última recolha.\nGestão, clientes, encomendas, eventos e modo Touch.')
-build(ROOT/'docs/manuals/INSTALACAO_PT.md','Manual_Instalacao_Food_Truck_Live_PT.pdf','Manual de instalação','GitHub, PostgreSQL, Supabase, Brevo, Vercel,\nCloudflare e alojamento Node.js/Docker.')
+build(ROOT/'docs/manuals/INSTALACAO_PT.md','Manual_Instalacao_Food_Truck_Live_PT.pdf','Manual de instalação','Guia completo, do início aos sites publicados.\nDados, imagens e emails, passo a passo.')
