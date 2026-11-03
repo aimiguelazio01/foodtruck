@@ -1,0 +1,9 @@
+{
+  "name": "foodtruck-customer",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-11-03",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {"directory": ".open-next/assets", "binding": "ASSETS"},
+  "services": [{"binding": "WORKER_SELF_REFERENCE", "service": "foodtruck-customer"}],
+  "vars": {"INTERNAL_API_URL": "https://api.example.com"}
+}

@@ -1,0 +1,10 @@
+-- Apenas num projeto/base nova. Substituir a palavra-passe ANTES de executar.
+-- Executar com a conta administrativa do PostgreSQL/Supabase.
+CREATE ROLE foodtruck_app LOGIN PASSWORD 'SUBSTITUIR_POR_SEGREDO_UNICO';
+GRANT foodtruck_app TO postgres;
+CREATE SCHEMA foodtruck AUTHORIZATION foodtruck_app;
+ALTER ROLE foodtruck_app SET search_path TO foodtruck, public;
+REVOKE ALL ON SCHEMA foodtruck FROM PUBLIC;
+-- Em Supabase, executar também (estes papéis não existem em PostgreSQL genérico):
+-- REVOKE ALL ON SCHEMA foodtruck FROM anon, authenticated;
+-- Não adicionar foodtruck aos esquemas expostos pela Data API.

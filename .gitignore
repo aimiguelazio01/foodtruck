@@ -16,3 +16,10 @@ tmp/
 .vercel/
 supabase/.temp/
 !.env.network.example
+
+!.env.install.example
+**/.open-next/
+**/.wrangler/
+**/.dev.vars*
+!**/.dev.vars.example
+release/

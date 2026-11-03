@@ -1,3 +1,5 @@
+> Instalação atual PostgreSQL: consulte [o manual de instalação](manuals/INSTALACAO_PT.md). A secção abaixo é histórica, da versão SQLite, e não descreve a base ativa.
+
 > Current connected-app architecture and run instructions: [CONNECTED_APPS.md](CONNECTED_APPS.md). The material below records the original single-app release.
 
 # Database

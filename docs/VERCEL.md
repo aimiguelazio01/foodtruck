@@ -1,47 +1,23 @@
 # Publicação no Vercel
 
-A aplicação atual tem dois frontends Next.js e uma API Fastify com PostgreSQL. A pasta `app` na raiz contém a versão antiga baseada em SQLite local. Não usar a raiz do repositório como Root Directory do projeto Vercel.
+A referência atual e completa é o [manual de instalação](manuals/INSTALACAO_PT.md), também disponível em [PDF](manuals/Manual_Instalacao_Food_Truck_Live_PT.pdf). Este resumo refere-se à arquitetura PostgreSQL atual.
 
-## Preparar o servidor
+Crie três projetos ligados ao mesmo repositório GitHub:
 
-Para usar o Render, seguir [RENDER.md](RENDER.md). O Blueprint `render.yaml` e o `Dockerfile.api` já preparam a API, o worker, o PostgreSQL e o disco de imagens.
+| Projeto | Root Directory | Framework | Output |
+| --- | --- | --- | --- |
+| Clientes | apps/customer | Next.js | .next |
+| Gestão | apps/management | Next.js | .next |
+| API | services/api | Other, vercel.json incluído | Não usar .next |
 
-A API precisa de um serviço Node.js persistente, do worker de manutenção e de uma base PostgreSQL. O Vercel dos frontends não inicia `scripts/dev-network.mjs` nem os serviços locais do computador.
+Use Node.js 24. Nos sites, `npm run build` e `INTERNAL_API_URL` com URL HTTPS da API, em build e runtime. Preserve os workspaces e permita ficheiros partilhados fora da raiz da app quando necessário.
 
-O modelo de alojamento completo existente está em `compose.network.yaml`; ver [CONNECTED_APPS.md](CONNECTED_APPS.md). Configurar armazenamento persistente para uploads ou S3, aplicar as migrações e criar o administrador antes de publicar. Os dados locais e os uploads da base em `data/` não são enviados pelo Git; devem ser migrados separadamente para o alojamento escolhido.
+A API pode funcionar no Vercel com o handler HTTP `services/api/api/index.ts`. Use PostgreSQL externo e storage externo persistente; não precisa de um serviço pago Render. No Supabase serverless, use transaction pooler em execução, e ligação direta/session para instalar/migrar.
 
-Confirmar que `https://<api>/api/v1/health` responde com `{"ok":true}`. A API deve ter HTTPS e ser acessível pelo servidor do Vercel. Usar as URLs públicas reais em CUSTOMER_APP_URL, MANAGEMENT_APP_URL e CORS_ORIGINS da API. Não colocar DATABASE_URL ou credenciais em variáveis NEXT_PUBLIC_*.
+A API recebe segredos PostgreSQL, certificado TLS, storage e Brevo/SMTP, além de CUSTOMER_APP_URL, MANAGEMENT_APP_URL e CORS_ORIGINS. Os sites não recebem passwords ou chaves de servidor. Aplique migrações e crie o administrador com os comandos do manual antes do teste funcional.
 
-## Projetos Vercel
+Mudar INTERNAL_API_URL exige nova compilação/publicação dos sites. Mudar variáveis da API exige nova publicação da API. CORS deve conter os dois domínios finais. Não use a raiz geral do repositório como raiz dos sites.
 
-Criar dois projetos a partir do mesmo repositório, ambos com framework Next.js e branch de produção `master`:
+O erro NEXT_NO_ROUTES_MANIFEST exige conferir a raiz, preset, output e logs do build da publicação em causa. Uma publicação antiga falhada continua a mostrar o erro depois de uma nova publicação ficar Ready.
 
-| Configuração | Menus dos clientes | Gestão |
-| --- | --- | --- |
-| Root Directory | `apps/customer` | `apps/management` |
-| Build Command | `npm run build` | `npm run build` |
-| Output Directory | valor predefinido do Next.js | valor predefinido do Next.js |
-| INTERNAL_API_URL | URL HTTPS da API, sem barra final | mesma URL |
-| CUSTOMER_APP_URL | URL pública dos clientes | URL pública dos clientes |
-| MANAGEMENT_APP_URL | URL pública da gestão | URL pública da gestão |
-
-Permitir acesso aos ficheiros fora da Root Directory para resolver o workspace e o package-lock da raiz. Usar Node.js 24 e a instalação npm com o lockfile do repositório. As reescritas `/api/v1/*` e `/uploads/*` usam INTERNAL_API_URL durante o build; depois de alterar esta variável, fazer um novo deploy.
-
-Não usar `http://localhost:4000` no Vercel: esse endereço refere-se ao próprio ambiente remoto. Sem uma API alojada, os frontends não conseguem carregar negócios, autenticar utilizadores nem criar encomendas.
-
-## Verificar a publicação
-
-### Erro NEXT_NO_ROUTES_MANIFEST
-
-Se o erro procurar `/vercel/path0/.next/routes-manifest.json`, confirmar em Settings → Build and Deployment que Root Directory está em `apps/customer` (clientes) ou `apps/management` (gestão). A compilação na raiz executa os vários workspaces, mas não gera um manifesto `.next` na raiz.
-
-Os ficheiros `vercel.json` dentro de cada aplicação fixam o framework Next.js, o comando `npm run build` e o output `.next`, relativo à Root Directory. Desativar overrides antigos do painel que usem comandos da raiz, `public` ou `out`. Confirmar também que não foi definido um caminho personalizado para o ficheiro de configuração. Fazer um novo deploy da branch `master`, sem reutilizar a cache de build anterior. Não copiar manualmente manifests entre projetos.
-
-Abrir `/api/v1/health` através de cada domínio frontend, carregar o catálogo e uma imagem de upload, iniciar sessão e confirmar as atualizações de encomendas. Consultar os Runtime Logs do Vercel para exceções do servidor; uma resposta HTTP 200 da página pode ainda conter a interface de erro do Next.js.
-
-Referência: https://vercel.com/docs/monorepos
-
-## Instalação atual
-
-A API já está alojada gratuitamente no Vercel, com PostgreSQL e imagens no Supabase. Ver [FREE_HOSTING.md](FREE_HOSTING.md) para os endereços e detalhes atuais. O Render é uma alternativa e não é necessário nesta instalação.
-
+Vercel Hobby tem condição de uso pessoal/não comercial. Consulte os preços e limites oficiais antes de usar profissionalmente. Os percursos Docker, Cloudflare e PostgreSQL alternativo estão explicados no novo manual.

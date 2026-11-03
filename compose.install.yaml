@@ -1,0 +1,71 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: foodtruck
+      POSTGRES_USER: foodtruck
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD em .env.install}
+    volumes: ["install_pg:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U foodtruck -d foodtruck"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+  api:
+    build: {context: ., dockerfile: Dockerfile.network}
+    env_file: .env.install
+    environment:
+      DATABASE_URL: postgres://foodtruck:${POSTGRES_PASSWORD}@postgres:5432/foodtruck
+      DATABASE_MIGRATION_URL: ""
+      DATA_DIRECTORY: /workspace/data
+      HOST: 0.0.0.0
+      PORT: "4000"
+      API_UPDATES_MODE: poll
+    volumes: ["install_media:/workspace/data"]
+    depends_on:
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      start_period: 40s
+      retries: 20
+    restart: unless-stopped
+  worker:
+    build: {context: ., dockerfile: Dockerfile.network}
+    command: ["npm", "run", "worker", "--workspace=@foodtruck/api"]
+    env_file: .env.install
+    environment:
+      DATABASE_URL: postgres://foodtruck:${POSTGRES_PASSWORD}@postgres:5432/foodtruck
+      DATA_DIRECTORY: /workspace/data
+    volumes: ["install_media:/workspace/data"]
+    depends_on:
+      api: {condition: service_healthy}
+    restart: unless-stopped
+  customer:
+    build: {context: ., dockerfile: Dockerfile.network}
+    command: ["npm", "run", "start", "--workspace=food-truck-customer", "--", "-p", "3000"]
+    environment: {INTERNAL_API_URL: "http://api:4000"}
+    depends_on:
+      api: {condition: service_healthy}
+    restart: unless-stopped
+  management:
+    build: {context: ., dockerfile: Dockerfile.network}
+    command: ["npm", "run", "start", "--workspace=food-truck-management", "--", "-p", "3001"]
+    environment: {INTERNAL_API_URL: "http://api:4000"}
+    depends_on:
+      api: {condition: service_healthy}
+    restart: unless-stopped
+  gateway:
+    image: caddy:2
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      CUSTOMER_DOMAIN: ${CUSTOMER_DOMAIN:?Defina CUSTOMER_DOMAIN}
+      MANAGEMENT_DOMAIN: ${MANAGEMENT_DOMAIN:?Defina MANAGEMENT_DOMAIN}
+    volumes: ["./Caddyfile.network:/etc/caddy/Caddyfile:ro", "install_caddy:/data", "install_caddy_config:/config"]
+    depends_on: [customer, management]
+    restart: unless-stopped
+volumes:
+  install_pg:
+  install_media:
+  install_caddy:
+  install_caddy_config:

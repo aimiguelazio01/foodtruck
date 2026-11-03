@@ -1,63 +1,50 @@
-> Connected application setup: see [docs/CONNECTED_APPS.md](docs/CONNECTED_APPS.md). For Vercel, see [docs/VERCEL.md](docs/VERCEL.md): deploy `apps/customer` and `apps/management`, with a separately hosted API. Customer app runs on port 3000; management on 3001; PostgreSQL API on 4000. The instructions below describe the original single-app release.
-
 # Food Truck Live
 
-A Portuguese (Portugal) food-truck management and guest-ordering web application, using Next.js, React, TypeScript and persistent SQLite. Includes three fictional businesses, owner/manager/staff accounts, digital menus, a cart with extras and sizes, pickup scheduling, protected tracking, kitchen operations, inventory, calendar, locations, customer tools, branding and reports.
+Aplicação web em português (Portugal) para clientes, carrinhas e equipas. A versão atual usa **dois sites Next.js, uma API Node.js e PostgreSQL**. A instalação de referência combina Vercel, Supabase e Brevo; também existem receitas para Node.js/Docker e modelos opcionais Cloudflare Workers.
 
-## Run locally
+## Começar por aqui
 
-Requires **Node.js 24** and npm. No PostgreSQL, Docker, payment account or API key is needed for local use.
+- [Manual de utilização em PDF](docs/manuals/Manual_Food_Truck_Live_PT.pdf)
+- [Manual detalhado de instalação em PDF](docs/manuals/Manual_Instalacao_Food_Truck_Live_PT.pdf)
+- [Instalação: fonte editável e passos](docs/manuals/INSTALACAO_PT.md)
+- [Utilização: fonte editável](docs/manuals/UTILIZACAO_PT.md)
 
-```sh
-npm ci
-npm run setup
-npm run seed
-npm run dev
-```
-
-Open **http://localhost:3000**. Public menus: `/b/urban-burger`, `/b/bella-pizza`, `/b/green-bowl`. Management: `/login`.
-
-Demo accounts use the password **DemoFoodTruck2026!**:
-
-- `owner@urban-burger.demo`
-- `manager@urban-burger.demo`
-- `staff@urban-burger.demo`
-
-Replace `urban-burger` with `bella-pizza` or `green-bowl` for the other businesses. Seed records are fictional. Normal changes persist in `data/foodtruck.sqlite`.
-
-## Production-mode local run
+Requisitos: Node.js 24, npm e PostgreSQL. Uma instalação nova não inclui contas nem dados operacionais de outra instalação.
 
 ```sh
-npm run build
+npm ci --include=dev
+npm run install:init
+# Editar .env.install com as SUAS ligações e serviços.
+npm run install:check
+npm run db:migrate
+npm run install:doctor
+npm run db:bootstrap
+npm run build:install
 npm start
 ```
 
-Run `npm run worker` in another terminal for pending-order expiry, session cleanup and contact retention. The app also expires pending orders on operational requests. Configure `APP_URL` before downloading QR codes. Offline public-menu fallback is enabled in the production build; it never queues orders or staff mutations.
+O bootstrap pede a primeira conta de administrador num terminal e recusa alterar uma base que já contém contas, organizações ou negócios. Em produção, configure HTTPS, email e armazenamento persistente. Para desenvolvimento, depois da configuração/migrações, use `npm run dev`. Sites: 3000 e 3001; API: 4000.
 
-## Verification
+## Instalação e portabilidade
 
-```sh
-npm test
-node --env-file-if-exists=.env.local scripts/validate.mjs
-npm run build
-npm run test:e2e
-npm run backup
-```
+- **Vercel:** projetos separados com raízes `apps/customer`, `apps/management` e `services/api`; a API comunica com PostgreSQL e storage externos. Ver o manual para variáveis, migrações e o erro routes-manifest.
+- **Docker:** `docker compose --env-file .env.install -f compose.install.yaml up -d --build`. Configure domínios/HTTPS e siga o manual para bootstrap dentro do contentor.
+- **Cloudflare:** DNS/proxy à frente de Docker, ou preparação opcional dos sites Workers com `npm run cloudflare:prepare -- customer https://SUA-API.example.com` (repetir para management). O adaptador instala-se apenas quando escolhido; validar build/preview antes de deploy. A API continua em Node.js.
+- **Base:** PostgreSQL próprio/gerido, incluindo Supabase. MySQL, SQLite e D1 requerem adaptação; não são trocas diretas.
+- **Imagens:** disco persistente, bucket privado Supabase ou S3/R2. Email por Brevo API ou SMTP.
 
-Playwright uses its own `data/e2e.sqlite` database and port 3100. Install a browser if necessary with `npx playwright install chromium`. Test data must never point at a production database. Browser reports are generated in `playwright-report/`.
+Os planos gratuitos têm limites e condições: Vercel Hobby é pessoal/não comercial. O manual compara planos com fontes e data de consulta. Nenhum comando de instalação compra planos ou copia a base online da referência.
 
-## New business without demo content
+## Manutenção e distribuição
 
-Run setup, then `node scripts/create-business.mjs my-truck "My Food Truck"`. Set the `FOODTRUCK_ADMIN_PASSWORD` environment variable to a unique password of at least 12 characters and run `node scripts/create-user.mjs owner@example.com my-truck`. Clear the variable afterwards. Sign in, create ingredients and products, add recipes, create public operating sessions, and publish the truck as open. A new business starts closed.
+`npm run backup` cria dump PostgreSQL e copia imagens locais; objetos de storage externo exigem cópia separada. Configure a ligação de migração e o esquema de backup, e ensaie restauros. Não use bootstrap numa atualização.
 
-## Important operating rules
+`npm run package:release` cria ZIP em `release/`, com código, recursos UPLOADS e manuais, excluindo segredos, base operacional e caches. Requer Git e Python 3. `npm run manuals:build` regenera PDFs a partir das fontes (ReportLab/Pillow e fontes Segoe UI ou DejaVu).
 
-- Pickup slots are 15 minutes, limited to five orders by default and published public sessions. The lead time respects menu preparation estimates.
-- Checkout reserves ingredients. Preparation deducts them exactly once. Earlier cancellation releases them; later cancellation records consumed ingredients as waste.
-- Orders expire after 15 minutes without confirmation.
-- Prices, option eligibility, availability, stock and pickup capacity are checked on the server. Checkout retries use a persistent secret key.
-- Tracking requires an HttpOnly secret cookie; an order number or URL alone does not authorize access.
-- Collection payments are manually recorded. Demonstration payments are explicitly simulated and reported separately from collection receipts. No card data or real payment processor is connected.
-- Password reset messages are written to the server-private `data/outbox` directory. Automated email delivery is an external integration to configure.
+A gestão dispõe de opção Atual/Touch nas Encomendas, Menu digital, Página de encomendas e Inventário. A escolha é local ao navegador. A localização pública corresponde a pontos/eventos publicados, com próximas paragens identificadas; não é GPS contínuo.
 
-See the architecture, features, database, testing and deployment documents in `docs/`. SQLite deployment requires one server and a persistent local disk. Real hosting, payment processing, email delivery and certified fiscal invoicing are not activated by this project.
+## Verificação e histórico
+
+`npm run typecheck` valida a API. Os testes de API devem usar base/esquema isolado; consulte `docs/TESTING.md`. Os testes e scripts legacy referem-se à versão SQLite anterior, não à instalação PostgreSQL. `docs/manuals/` é a referência atual de instalação e utilização; documentos históricos descrevem decisões anteriores.
+
+O sistema não ativa pagamentos de cartão nem faturação fiscal certificada. Não publique passwords, dumps ou chaves API. Preserve UPLOADS: são recursos de conteúdo para uso manual.

@@ -18,7 +18,17 @@
     "db:local": "node scripts/local-postgres.mjs",
     "test:api": "node --env-file-if-exists=data/network.env node_modules/tsx/dist/cli.mjs services/api/scripts/test-checkout.ts && node --env-file-if-exists=data/network.env node_modules/tsx/dist/cli.mjs services/api/scripts/test-customer.ts",
     "typecheck": "npm run typecheck --workspace=@foodtruck/api",
-    "backup:legacy": "node --env-file-if-exists=.env.local scripts/backup.mjs"
+    "backup:legacy": "node --env-file-if-exists=.env.local scripts/backup.mjs",
+    "install:init": "node scripts/install.mjs init",
+    "install:check": "node scripts/install.mjs check",
+    "install:doctor": "node scripts/install.mjs doctor",
+    "db:migrate": "node scripts/install.mjs migrate",
+    "db:bootstrap": "node scripts/bootstrap-network.mjs",
+    "package:release": "python scripts/package-release.py",
+    "manuals:build": "python scripts/build-manuals.py",
+    "cloudflare:prepare": "node scripts/prepare-cloudflare.mjs",
+    "build:install": "node scripts/install.mjs build",
+    "test:install": "node --env-file-if-exists=data/network.env services/api/scripts/test-install.mjs"
   },
   "dependencies": {
     "leaflet": "1.9.4",
