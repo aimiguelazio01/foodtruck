@@ -120,3 +120,9 @@ The Orders screen supports **Cartões** and **Lista**, with saved view/grouping 
 Exports use a repeatable-read snapshot and enforce the same order capability and truck scope as the screen. Staff contacts remain redacted. Tracking proof hashes, payload hashes and session credentials are never exported. The API uses ExcelJS as a runtime dependency, so downloading does not depend on a Codex runtime.
 
 Checks: `node --env-file=data/network.env node_modules/tsx/dist/cli.mjs services/api/scripts/test-order-export.ts` validates an isolated export including tenant boundaries, contact redaction, typed dates/numbers, literal formula-like customer names, empty exports and subtotal reconciliation. `node --env-file=data/network.env e2e/orders-list-export.cjs` checks grouping, list actions, preferences, mobile layout and the downloaded workbook, then cleans up temporary orders/events. The generated test workbook was also imported, inspected and visually rendered with Artifact Tool.
+
+### Layout touch na gestão
+
+Nas áreas Encomendas, Menu digital, Página de encomendas e Inventário, o seletor «Modo de utilização» permite alternar entre Atual (predefinido, apresentação existente) e Touch. A preferência fica guardada apenas neste navegador, na chave `ft-management-layout-v1`, e aplica-se às quatro áreas e aos seus editores. Não altera a página pública dos clientes.
+
+O modo Touch amplia os controlos para pelo menos 52 px, aumenta texto e espaçamento, adapta as listas de encomendas e ingredientes e usa navegação horizontal em ecrãs até 1000 px. A opção Atual restaura imediatamente o layout existente. Mantém as mesmas permissões, dados e ações.
