@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readdir } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 import { loadD1Migrations } from './d1-schema.mjs';
@@ -283,7 +283,14 @@ test('Worker requires a valid installation token and stores a password hash', as
 test('D1 migrations cover the current PostgreSQL schema and start with an empty installation', async () => {
   const migrations = await loadD1Migrations();
   const source = await readdir(new URL('../../services/api/migrations/', import.meta.url));
-  assert.deepEqual(migrations.map(({ name }) => `${name}.sql`), [...source.filter(name => name.endsWith('.sql')).sort(), '019_catalog_revision.sql', '020_maintenance_lease.sql', '021_bootstrap_receipt.sql']);
+  // D1 numbers its own additions 019-022; PostgreSQL's 019_write_guard is D1's 022_write_guard (identical SQL).
+  const shared = source.filter(name => name.endsWith('.sql') && name !== '019_write_guard.sql').sort();
+  assert.deepEqual(migrations.map(({ name }) => `${name}.sql`), [...shared, '019_catalog_revision.sql', '020_maintenance_lease.sql', '021_bootstrap_receipt.sql', '022_write_guard.sql']);
+  const [postgresGuard, d1Guard] = await Promise.all([
+    readFile(new URL('../../services/api/migrations/019_write_guard.sql', import.meta.url), 'utf8'),
+    readFile(new URL('./migrations/022_write_guard.sql', import.meta.url), 'utf8'),
+  ]);
+  assert.equal(d1Guard, postgresGuard);
   const db = new DatabaseSync(':memory:');
   try {
     for (const { sql } of migrations) db.exec(sql);

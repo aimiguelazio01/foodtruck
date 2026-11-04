@@ -1,1 +1,1 @@
-{"extends":"./tsconfig.json","compilerOptions":{"noEmit":false,"outDir":"dist","rootDir":"../.."},"include":["src","../../packages/backend/index.ts"]}
+{"extends":"./tsconfig.json","compilerOptions":{"noEmit":false,"outDir":"dist","rootDir":"../.."},"include":["src","../../packages/backend/index.ts","../../packages/backend/db","../../packages/backend/services"]}

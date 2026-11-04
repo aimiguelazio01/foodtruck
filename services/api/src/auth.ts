@@ -1,6 +1,7 @@
 import {createHash,randomBytes,scryptSync,timingSafeEqual} from "node:crypto";
 import type {FastifyRequest} from "fastify";
 import {pool} from "./db.js";
+import {isAllowed} from "../../../packages/backend/auth/capability.js";
 export const digest=(value:string)=>createHash("sha256").update(value).digest("hex");
 declare module "fastify" { interface FastifyRequest { user: {id:string,email:string}|null } }
 export async function authenticate(req:FastifyRequest){req.user=null;const token=req.headers.authorization?.match(/^Bearer ([a-f0-9]{64})$/)?.[1]||req.headers.cookie?.match(/(?:^|;\s*)staff_session=([a-f0-9]{64})(?:;|$)/)?.[1];if(token){const result=await pool.query("SELECT u.id,u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.hash=$1 AND s.expires>$2",[digest(token),Date.now()]);req.user=result.rows[0]||null;}}
@@ -41,13 +42,7 @@ function requiredCapability(req:FastifyRequest):Capability|'admin'|'images'|null
 export async function requireAdministrator(req:FastifyRequest,businessId:string){const access=req.user&&await accessFor(req.user.id,businessId);if(!access?.isAdmin)throw Object.assign(new Error('Apenas o administrador pode gerir utilizadores e permissões.'),{statusCode:req.user?403:401});return access;}
 export async function requireMember(req:FastifyRequest,businessId:string,roles?:string[]){
  if(!req.user)throw Object.assign(new Error('Autenticação necessária.'),{statusCode:401});const access=await accessFor(req.user.id,businessId);const cap=requiredCapability(req);
- let allowed=!!access;
- if(access&&!access.isAdmin){
-  if(cap==='admin')allowed=false;
-  else if(cap==='images')allowed=!!(access.permissions.menus||access.permissions.branding)&&(access.custom||access.role!=='staff');
-  else if(cap){allowed=access.permissions[cap]===true;if(!access.custom&&access.role==='staff'&&cap==='menus'&&req.method!=='GET')allowed=(req.body as any)?.command==='availability';}
-  else if(roles)allowed=roles.includes(access.role);
- }
+ const allowed=isAllowed(access as any,cap,req.method,(req.body as any)?.command,roles);
  if(!allowed)throw Object.assign(new Error('Não tem permissão para esta operação.'),{statusCode:403});return access!;
 }
 export async function login(email:unknown,password:unknown){if(typeof email!=="string"||email.length>254||typeof password!=="string"||password.length>256)throw Object.assign(new Error("Credenciais inválidas."),{statusCode:400});email=email.trim().toLowerCase();const now=Date.now();const c=await pool.connect();try{await c.query("BEGIN");await c.query("SELECT pg_advisory_xact_lock(hashtext($1))",[email]);const a=(await c.query("SELECT * FROM login_attempts WHERE email=$1",[email])).rows[0];if(a&&Number(a.reset)>now&&a.count>=5){await c.query("COMMIT");throw Object.assign(new Error("Tente novamente dentro de 15 minutos."),{statusCode:429});}await c.query("INSERT INTO login_attempts VALUES($1,1,$2) ON CONFLICT(email) DO UPDATE SET count=CASE WHEN login_attempts.reset<=$3 THEN 1 ELSE login_attempts.count+1 END,reset=CASE WHEN login_attempts.reset<=$3 THEN $2 ELSE login_attempts.reset END",[email,now+900000,now]);const user=(await c.query("SELECT * FROM users WHERE email=$1",[email])).rows[0];const [salt,hash]=(user?.password||`${"0".repeat(32)}:${"0".repeat(128)}`).split(":");const expected=Buffer.from(hash||"","hex"),actual=scryptSync(password,salt,64);if(!user||expected.length!==actual.length||!timingSafeEqual(expected,actual)){await c.query("COMMIT");throw Object.assign(new Error("Credenciais inválidas."),{statusCode:401});}await c.query("DELETE FROM login_attempts WHERE email=$1",[email]);const token=randomBytes(32).toString("hex");await c.query("INSERT INTO sessions VALUES($1,$2,$3)",[digest(token),user.id,now+28800000]);await c.query("COMMIT");return {token,user:{id:user.id,email:user.email}};}catch(e){await c.query("ROLLBACK").catch(()=>{});throw e;}finally{c.release();}}

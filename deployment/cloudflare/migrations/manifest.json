@@ -86,5 +86,9 @@
   {
     "name": "021_bootstrap_receipt",
     "sha256": "cde150726940e2fe4dbc0660876cd6bc748a1cd8f94c67483c99885e4e00a13e"
+  },
+  {
+    "name": "022_write_guard",
+    "sha256": "c8c69fd2c8eb675699c98f613bd56631c7b4661c19cdb5e78d3ee5064e73b6f7"
   }
 ]

@@ -10,18 +10,16 @@ import { businessRights, readManagedBusinesses, readManagedResource } from './ma
 import { canManageCompany, manageCompanySettings } from './company-settings.mjs';
 import { mediaPath, readMedia, saveImage } from './media.mjs';
 import { clientRateIdentity, takeRequestSlot } from './rate-limits.mjs';
+import { json, sessionToken, sessionUser, sha256 as hash } from './http.mjs';
+import { handleSharedRoute } from './shared-routes.mjs';
+import { HttpError } from '../../packages/backend/db/port.js';
 
 const rateWindow = 900_000;
 const throttled = () => json({ message: 'Demasiados pedidos. Tente novamente mais tarde.' }, 429, { 'Retry-After': '900' });
 
 const sessionSeconds = 28_800;
-const encoder = new TextEncoder();
 const hex = bytes => Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2, '0')).join('');
-const hash = async value => hex(await crypto.subtle.digest('SHA-256', encoder.encode(value)));
 const cookie = (token, age) => `staff_session=${token}; HttpOnly; SameSite=Lax; Secure; Path=/; Max-Age=${age}`;
-const json = (body, status = 200, headers = {}) => Response.json(body, {
-  status, headers: { 'Cache-Control': 'no-store', 'X-Foodtruck-Updates': 'poll', ...headers },
-});
 
 async function login(request, env) {
   const body = await readBoundedJSON(request);
@@ -49,18 +47,6 @@ async function login(request, env) {
   return json({ user: { id: user.id, email: user.email } }, 200, { 'Set-Cookie': cookie(token, sessionSeconds) });
 }
 
-function sessionToken(request) {
-  return request.headers.get('authorization')?.match(/^Bearer ([a-f0-9]{64})$/)?.[1] ??
-    request.headers.get('cookie')?.match(/(?:^|;\s*)staff_session=([a-f0-9]{64})(?:;|$)/)?.[1];
-}
-
-async function sessionUser(request, db) {
-  const token = sessionToken(request);
-  if (!token) return null;
-  return db.prepare(`SELECT u.id,u.email FROM sessions s JOIN users u ON u.id=s.user_id
-    WHERE s.hash=? AND s.expires>?`).bind(await hash(token), Date.now()).first();
-}
-
 async function logout(request, env) {
   const token = sessionToken(request);
   if (token) await env.DB.prepare('DELETE FROM sessions WHERE hash=?').bind(await hash(token)).run();
@@ -74,6 +60,8 @@ export default {
   async fetch(request, env) {
     try {
       const path = new URL(request.url).pathname;
+      const shared = await handleSharedRoute(request, env);
+      if (shared) return shared;
       const media = mediaPath.exec(path);
       if (media && (request.method === 'GET' || request.method === 'HEAD')) return await readMedia(env, media[1], request.method === 'HEAD');
       const logo = /^\/api\/v1\/network\/([a-zA-Z0-9-]{1,100})\/company\/images$/.exec(path);
@@ -124,7 +112,7 @@ export default {
         return result.status === 200 ? json({ ok: true }) : json({ message: result.message }, result.status);
       }
       if (request.method === 'GET') {
-        const resource = /^\/api\/v1\/manage\/businesses\/([a-zA-Z0-9-]{1,100})\/(products|inventory|events|settings)$/.exec(path);
+        const resource = /^\/api\/v1\/manage\/businesses\/([a-zA-Z0-9-]{1,100})\/(products|events|settings)$/.exec(path);
         if (resource || path === '/api/v1/manage/businesses' || path === '/api/v1/manage/customer-app') {
           const user = await sessionUser(request, env.DB);
           if (!user) return json({ message: 'Autenticação necessária.' }, 401);
@@ -182,6 +170,7 @@ export default {
       }
       return await handleInstallation(request, env) ?? json({ message: 'Página não encontrada.' }, 404);
     } catch (error) {
+      if (error instanceof HttpError) return json({ message: error.message }, error.statusCode);
       // Log only the route and error class/message under a short id; never request bodies, cookies or tokens.
       const errorId = crypto.randomUUID().slice(0, 8);
       console.error(`api-error ${errorId} ${request.method} ${new URL(request.url).pathname} ${error?.name ?? 'Error'}: ${String(error?.message ?? error).slice(0, 200)}`);
