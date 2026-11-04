@@ -1,50 +1,57 @@
 # Food Truck Live
 
-Aplicação web em português (Portugal) para clientes, carrinhas e equipas. A versão atual usa **dois sites Next.js, uma API Node.js e PostgreSQL**. A instalação de referência combina Vercel, Supabase e Brevo; também existem receitas para Node.js/Docker e modelos opcionais Cloudflare Workers.
+Aplicação em português (Portugal), com dois sites Next.js, API Node.js e PostgreSQL.
 
-## Começar por aqui
+## Instaladores com ícone (1.1.2)
 
-- [Manual de utilização em PDF](docs/manuals/Manual_Food_Truck_Live_PT.pdf)
-- [Manual detalhado de instalação em PDF](docs/manuals/Manual_Instalacao_Food_Truck_Live_PT.pdf)
-- [Instalação: fonte editável e passos](docs/manuals/INSTALACAO_PT.md)
-- [Utilização: fonte editável](docs/manuals/UTILIZACAO_PT.md)
+A pasta `release/installers` contém Setup Windows x64, PKG macOS Intel/Apple Silicon e DEB Ubuntu/Debian x64/ARM64. Incluem Node.js, PostgreSQL e a aplicação já compilada; não exigem Node/npm nem comandos no computador do utilizador. O ícone abre a aplicação no navegador habitual.
 
-Requisitos: Node.js 24, npm e PostgreSQL. Uma instalação nova não inclui contas nem dados operacionais de outra instalação.
+Leia [Instaladores: utilização e validação](docs/distribution/INSTALADORES_PT.md). Os dados ficam numa pasta do utilizador, separada do programa e preservada na desinstalação. Os pacotes não estão assinados/notarizados. A execução nativa foi testada em Windows; macOS/Linux permanecem por ensaiar nesses sistemas.
+
+## Instalar a distribuição de código (1.0.1)
+
+A entrega para marketplace contém apenas **Food_Truck_Live-1.0.1.zip** e **INICIAR.mjs**, lado a lado. Com Node.js 24 LTS e npm instalados, execute no terminal:
+
+```sh
+node INICIAR.mjs
+```
+
+O mesmo iniciador serve Windows x64, macOS x64/Apple Silicon e Linux x64/ARM64 com glibc. Verifica e extrai o ZIP automaticamente. Não precisa de Docker, Git nem Python. A primeira utilização requer internet. Não execute com sudo/root.
+
+Escolha **Abrir demo** (apenas consulta) ou **Criar sistema novo / abrir o meu sistema**. Os dados ficam em `.foodtruck/data`, separados do código extraído em `.foodtruck/releases`. Substitua iniciador e ZIP juntos ao atualizar; preserve os dados e faça backup primeiro.
+
+Leia [COMEÇAR_AQUI.md](COMEÇAR_AQUI.md) e o [manual de instalação](docs/manuals/INSTALACAO_PT.md). Os manuais PDF e manifesto estão dentro do ZIP. O percurso local foi testado em Windows; a execução nativa em macOS/Linux está preparada, mas ainda não foi testada nesses sistemas.
+
+## Perfis web
+
+Para publicar na web, extraia o ZIP manualmente. Inclui Docker local/servidor, Vercel (sites e API separados) e Cloudflare (sites Workers com API externa). PostgreSQL e storage seguem o perfil escolhido. Não se distribuem dados reais nem segredos.
+
+## Desenvolvimento e distribuição
+
+Requisitos: Node.js 24 com npm; Python 3 apenas para gerar ZIP e PDFs. Não é necessário Git para empacotar.
 
 ```sh
 npm ci --include=dev
 npm run install:init
-# Editar .env.install com as SUAS ligações e serviços.
+# Editar .env.install
 npm run install:check
 npm run db:migrate
-npm run install:doctor
-npm run db:bootstrap
+npm run install:token
 npm run build:install
 npm start
 ```
 
-O bootstrap pede a primeira conta de administrador num terminal e recusa alterar uma base que já contém contas, organizações ou negócios. Em produção, configure HTTPS, email e armazenamento persistente. Para desenvolvimento, depois da configuração/migrações, use `npm run dev`. Sites: 3000 e 3001; API: 4000.
+Abra a ligação privada mostrada por `install:token`. Para desenvolvimento, depois de configurar a base, use `npm run dev`.
 
-## Instalação e portabilidade
+```sh
+npm run typecheck
+npm run test:distribution
+npm run test:release
+npm run package:release
+```
 
-- **Vercel:** projetos separados com raízes `apps/customer`, `apps/management` e `services/api`; a API comunica com PostgreSQL e storage externos. Ver o manual para variáveis, migrações e o erro routes-manifest.
-- **Docker:** `docker compose --env-file .env.install -f compose.install.yaml up -d --build`. Configure domínios/HTTPS e siga o manual para bootstrap dentro do contentor.
-- **Cloudflare:** DNS/proxy à frente de Docker, ou preparação opcional dos sites Workers com `npm run cloudflare:prepare -- customer https://SUA-API.example.com` (repetir para management). O adaptador instala-se apenas quando escolhido; validar build/preview antes de deploy. A API continua em Node.js.
-- **Base:** PostgreSQL próprio/gerido, incluindo Supabase. MySQL, SQLite e D1 requerem adaptação; não são trocas diretas.
-- **Imagens:** disco persistente, bucket privado Supabase ou S3/R2. Email por Brevo API ou SMTP.
+O ZIP versionado e o iniciador ficam em `release/marketplace`, sem outros ficheiros exteriores. O manifesto fica dentro do ZIP e o iniciador contém o checksum SHA-256 do arquivo. A lista explícita de ficheiros é `scripts/release-files.json`. Consulte `docs/distribution/INVENTARIO.md` e `docs/distribution/VALIDACAO.md`.
 
-Os planos gratuitos têm limites e condições: Vercel Hobby é pessoal/não comercial. O manual compara planos com fontes e data de consulta. Nenhum comando de instalação compra planos ou copia a base online da referência.
+`npm test` executa a validação PostgreSQL da distribuição. Os testes históricos SQLite e Playwright ficam fora do pacote.
 
-## Manutenção e distribuição
-
-`npm run backup` cria dump PostgreSQL e copia imagens locais; objetos de storage externo exigem cópia separada. Configure a ligação de migração e o esquema de backup, e ensaie restauros. Não use bootstrap numa atualização.
-
-`npm run package:release` cria ZIP em `release/`, com código, recursos UPLOADS e manuais, excluindo segredos, base operacional e caches. Requer Git e Python 3. `npm run manuals:build` regenera PDFs a partir das fontes (ReportLab/Pillow e fontes Segoe UI ou DejaVu).
-
-A gestão dispõe de opção Atual/Touch nas Encomendas, Menu digital, Página de encomendas e Inventário. A escolha é local ao navegador. A localização pública corresponde a pontos/eventos publicados, com próximas paragens identificadas; não é GPS contínuo.
-
-## Verificação e histórico
-
-`npm run typecheck` valida a API. Os testes de API devem usar base/esquema isolado; consulte `docs/TESTING.md`. Os testes e scripts legacy referem-se à versão SQLite anterior, não à instalação PostgreSQL. `docs/manuals/` é a referência atual de instalação e utilização; documentos históricos descrevem decisões anteriores.
-
-O sistema não ativa pagamentos de cartão nem faturação fiscal certificada. Não publique passwords, dumps ou chaves API. Preserve UPLOADS: são recursos de conteúdo para uso manual.
+A aplicação não adiciona pagamentos de cartão nem faturação certificada. A localização pública usa paragens e eventos publicados. Mapas e email precisam de acesso aos respetivos serviços externos.

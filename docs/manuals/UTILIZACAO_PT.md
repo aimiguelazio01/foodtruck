@@ -4,6 +4,9 @@ Food Truck Live | Edição ilustrada de 3 de novembro de 2026
 Guia para administradores, equipas de food trucks e clientes. Corresponde à versão com sites separados para clientes e gestão, API PostgreSQL e opção de interface Touch.
 
 ## 1. Conhecer a aplicação
+
+Em Windows, macOS ou Linux, execute node INICIAR.mjs e escolha Abrir demo ou Criar sistema novo / abrir o meu sistema. A demo tem uma faixa permanente de apenas consulta: edição, uploads, registo, encomendas e envio de email ficam desativados. Os passos de alteração descritos neste manual aplicam-se ao seu sistema real. Termine o lançador com Ctrl+C antes de mudar de perfil.
+
 O Food Truck Live permite gerir uma rede de carrinhas, publicar menus e eventos, receber encomendas e acompanhar a sua preparação e recolha. A área pública é usada pelos clientes; a gestão exige uma conta de equipa com permissões.
 
 | Área | Para que serve |
@@ -15,7 +18,7 @@ Na instalação da aplicação, utilize os endereços do site dos clientes e da 
 
 Uma conta de cliente não dá acesso à gestão. A conta do GitHub, Vercel, Supabase ou Brevo também não é a conta de gestão da aplicação.
 
-O sistema suporta pagamento registado na recolha e modalidades de demonstração. Não inclui um processador de cartões ativo nem faturação fiscal certificada. As exportações Excel são ficheiros operacionais.
+O sistema suporta pagamento registado na recolha. A demo distribuída permite apenas consulta e não aceita encomendas ou pagamentos simulados. Não inclui um processador de cartões ativo nem faturação fiscal certificada. As exportações Excel são ficheiros operacionais.
 
 As capturas desta edição foram recolhidas em 3 de novembro de 2026. Mostram a aplicação real ou exemplos publicados pelos fornecedores, identificados nas legendas. O aspeto pode variar com a versão e o tamanho do ecrã.
 
@@ -33,7 +36,7 @@ Se se esqueceu da palavra-passe, use «Recuperar palavra-passe». O envio depend
 
 As opções disponíveis dependem das permissões. Se um menu não aparece, peça ao administrador que verifique o acesso. A aplicação pode abrir diretamente a área Rede quando a conta gere toda a organização.
 
-Na primeira instalação, o comando de bootstrap cria uma conta individual definida pelo instalador. Não há uma palavra-passe universal para novas instalações. As credenciais de demonstração antigas não devem ser usadas em produção.
+Na primeira instalação, o assistente protegido cria administrador, organização e primeiro negócio. Não há uma palavra-passe universal para novas instalações. As credenciais de demonstração antigas não devem ser usadas em produção.
 
 ![Figura 2. Entrada na gestão: usar a conta da equipa. A conta de cliente é independente.](images/gestao-login.png)
 

@@ -82,3 +82,22 @@
 
 .auth-story .auth-truck-image{display:block;width:100%;max-width:560px;height:280px;object-fit:contain;object-position:left center;margin-top:25px;flex-shrink:0}
 @media(max-width:600px){.auth-story .auth-truck-image{height:190px;max-width:360px;margin-top:12px;align-self:center;object-position:center}}
+
+.demo-notice{position:sticky;top:0;z-index:1000;display:flex;flex-wrap:wrap;align-items:center;gap:8px 24px;padding:12px 24px;background:#20271f;color:#fff;font-size:14px;line-height:1.5}
+.demo-notice strong{color:#f3a567}.demo-notice a{color:#fff;text-decoration:underline}
+.installation-page{max-width:760px;margin:0 auto;padding:clamp(24px,6vw,64px) 24px;min-height:100dvh}
+.installation-content{margin-top:48px}.installation-content h1{font-size:clamp(30px,5vw,48px);line-height:1.12;margin-bottom:24px}
+.installation-content>p{max-width:60ch;line-height:1.65}.installation-content form{margin-top:32px;max-width:500px}
+.installation-content fieldset{padding:0;border:0;display:grid;gap:20px;min-width:0}
+.installation-content label{display:grid;gap:8px;font-weight:600}.installation-content input{width:100%;min-height:48px}
+.installation-content small{font-weight:400}.installation-content button{min-height:48px}
+button:disabled,input:disabled,textarea:disabled,select:disabled{cursor:not-allowed;opacity:.65}
+
+@media(min-width:901px){html[data-demo=true] .sidebar{top:var(--demo-height,48px);overflow-y:auto}}
+
+.appearance-preview{border:1px solid #cbd0c4;border-radius:12px;padding:24px;margin:16px 0}
+.appearance-preview .preview-products{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.appearance-preview article{background:#fff;color:#20271f;padding:12px;border-radius:8px}
+.appearance-preview article p{font-size:12px;margin:8px 0}.preview-photo{height:64px;border-radius:6px;margin-bottom:12px;opacity:.75}
+.preview-compact article{padding:8px}.preview-compact .preview-photo{height:40px}.preview-showcase .preview-products{grid-template-columns:repeat(2,minmax(0,1fr))}.preview-showcase .preview-photo{height:100px}
+@media(max-width:600px){.appearance-preview .preview-products{grid-template-columns:1fr}}

@@ -1,3 +1,3 @@
 import {defineCloudflareConfig} from '@opennextjs/cloudflare';
-// Estas páginas usam dados no-store. Não ativar cache de respostas privadas.
+// As páginas privadas usam no-store; não partilhar cache de respostas autenticadas.
 export default defineCloudflareConfig();

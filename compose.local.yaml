@@ -1,0 +1,64 @@
+name: foodtruck-${FOODTRUCK_PROFILE:-system}
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: foodtruck
+      POSTGRES_USER: foodtruck
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Execute install:init e defina POSTGRES_PASSWORD}
+    volumes: ["local_pg:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U foodtruck -d foodtruck"]
+      interval: 5s
+      retries: 20
+  api:
+    build: {context: ., dockerfile: Dockerfile.network}
+    env_file: .env.install
+    environment:
+      DATABASE_URL: postgresql://foodtruck:${POSTGRES_PASSWORD}@postgres:5432/foodtruck
+      DATABASE_MIGRATION_URL: ""
+      DATA_DIRECTORY: /workspace/data
+      DEMO_MODE: ${DEMO_MODE:-0}
+      ALLOW_DEMO_SEED: ${ALLOW_DEMO_SEED:-0}
+      HOST: 0.0.0.0
+      PORT: "4000"
+      COOKIE_SECURE: "0"
+      API_UPDATES_MODE: poll
+      CUSTOMER_APP_URL: http://localhost:3000
+      MANAGEMENT_APP_URL: http://localhost:3001
+      CORS_ORIGINS: http://localhost:3000,http://localhost:3001
+    volumes: ["local_media:/workspace/data"]
+    depends_on:
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      start_period: 40s
+      retries: 30
+  worker:
+    build: {context: ., dockerfile: Dockerfile.network}
+    command: ["node", "services/api/dist/services/api/src/worker.js"]
+    env_file: .env.install
+    environment:
+      DATABASE_URL: postgresql://foodtruck:${POSTGRES_PASSWORD}@postgres:5432/foodtruck
+      DEMO_MODE: ${DEMO_MODE:-0}
+      DATA_DIRECTORY: /workspace/data
+    depends_on:
+      api: {condition: service_healthy}
+  customer:
+    build: {context: ., dockerfile: Dockerfile.network}
+    command: ["npm", "run", "start", "--workspace=food-truck-customer", "--", "-H", "0.0.0.0", "-p", "3000"]
+    environment: {INTERNAL_API_URL: "http://api:4000"}
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on:
+      api: {condition: service_healthy}
+  management:
+    build: {context: ., dockerfile: Dockerfile.network}
+    command: ["npm", "run", "start", "--workspace=food-truck-management", "--", "-H", "0.0.0.0", "-p", "3001"]
+    environment: {INTERNAL_API_URL: "http://api:4000"}
+    ports: ["127.0.0.1:3001:3001"]
+    depends_on:
+      api: {condition: service_healthy}
+volumes:
+  local_pg:
+  local_media:

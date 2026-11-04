@@ -1,8 +1,10 @@
 import {mkdir,appendFile} from 'node:fs/promises';
 import {join} from 'node:path';
-
+import {isDemo,isDemoReadOnly} from './installation.js';
 const unavailable=()=>Object.assign(new Error('O envio de emails ainda não está disponível. Tente novamente após a configuração do serviço.'),{statusCode:503,code:'EMAIL_UNAVAILABLE'});
 export function assertAccountMailAvailable(){
+  if(isDemoReadOnly())throw unavailable();
+  if(isDemo())return;
   const configured=!!(process.env.SMTP_URL||(process.env.BREVO_API_KEY&&process.env.MAIL_FROM));
   if((process.env.NODE_ENV==='production'||process.env.VERCEL)&&!configured)throw unavailable();
 }
@@ -11,6 +13,11 @@ export async function sendAccountMail(email:string,url:string,kind:'verify'|'cus
   const subject=kind==='verify'?'Confirme o seu email — Food Truck Live':'Recuperar palavra-passe — Food Truck Live';
   const text=kind==='verify'?`Para ativar a sua conta Food Truck Live, abra esta ligação:\n\n${url}\n\nA ligação é válida durante 24 horas. Se não pediu este registo, ignore este email.`:`Para definir uma nova palavra-passe, abra esta ligação:\n\n${url}\n\nSe não pediu esta alteração, ignore este email.`;
   try{
+    if(isDemo()){
+      const directory=process.env.DATA_DIRECTORY||'../../data';await mkdir(directory,{recursive:true});
+      await appendFile(join(directory,'demo-outbox.jsonl'),JSON.stringify({email,url,kind,created_at:Date.now()})+'\n',{mode:0o600});
+      return 'outbox' as const;
+    }
     if(process.env.BREVO_API_KEY){
       const from=process.env.MAIL_FROM||'';
       const match=from.match(/^\s*(.*?)\s*<([^<>\r\n]+)>\s*$/);

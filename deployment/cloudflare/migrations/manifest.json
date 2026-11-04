@@ -1,0 +1,90 @@
+[
+  {
+    "name": "001_initial",
+    "sha256": "6b3e959c2ff4ec5da42ec62e06aca9ad97519e2453e0c3d938a1529a0d3061ce"
+  },
+  {
+    "name": "002_network",
+    "sha256": "e37ee228a2fc3d254bbe1520513b15fc969eca868ddcffdc71b76eb4b37838e6"
+  },
+  {
+    "name": "003_customers",
+    "sha256": "7a27c8a2a0861ddc2a6c614445b7f7e41fd7356f491c0c08f67778155a1fcdc6"
+  },
+  {
+    "name": "003_network_idempotency",
+    "sha256": "0b1dec6e86a487828a66e67a3a3b6d16f12e7f027d3c61eef4e4e1032a62b5e5"
+  },
+  {
+    "name": "004_customer_orders",
+    "sha256": "7749bcbe8ac7a6a7806710a56413b72a232e203c9956911e2ab12f99b0293e31"
+  },
+  {
+    "name": "005_customer_reset",
+    "sha256": "a701232597f6ca79f9ce24867758f0c8df8cefae238ab8c775158ede275fc968"
+  },
+  {
+    "name": "006_order_idempotency",
+    "sha256": "8133f30d042cad2f7d71ba054eca9a431c7603b59dcaa38792b1d2dcb1d57b23"
+  },
+  {
+    "name": "007_order_version",
+    "sha256": "82068fbc05c67612533c74cd4e04e56525ce44fc53b2bb1be98b5c3bf741d46f"
+  },
+  {
+    "name": "008_network_constraints",
+    "sha256": "316bdd114e482b408271b3a3613220258f7b9576b72f7ba628e4b4a8f8f609f3"
+  },
+  {
+    "name": "009_domain_events",
+    "sha256": "0f83b13260fff4c426e5dabce97a1d063c096b941bbf7ed70dbe6520da237d08"
+  },
+  {
+    "name": "010_network_metrics_indexes",
+    "sha256": "572e262618e2fb86dfc7b94916a791e67ff99f4a246c33f6331591b824ac7c34"
+  },
+  {
+    "name": "011_user_permissions",
+    "sha256": "5ae6fcfe0aae187677b25d8cdcd617e02610fddc6d85a5b2e9af252a30361200"
+  },
+  {
+    "name": "012_task_management",
+    "sha256": "09b725ea5029bc2d2c07efafb934fa7b51adc1f5494d4dc7dd66ab526d31c9cd"
+  },
+  {
+    "name": "013_company_branding",
+    "sha256": "f9dd55cde5e43d35b83c0ee8fce054c871d39ad4d67dfd8ef1531ff01c3c89bc"
+  },
+  {
+    "name": "014_inventory_management",
+    "sha256": "de4ddcfd76a221c1c080122defa9873708b65d282f07c8a0a1284565eff6e48f"
+  },
+  {
+    "name": "015_event_locations",
+    "sha256": "16ddfadae06c68670e6fc50a06702c8672026db2df7ee2460752dda7fb17815f"
+  },
+  {
+    "name": "016_installation",
+    "sha256": "77399cb4fb005806ec9d5f9187862f9d89a2e4f6f5286bd7e2eb3431c8badd60"
+  },
+  {
+    "name": "017_storefront_appearance",
+    "sha256": "93adb3f71289702e2de30608a06a929e69aebc365af9d2971b569787eeb79c48"
+  },
+  {
+    "name": "018_catalog_background",
+    "sha256": "7ead8f72d9188db3b7c261e1b444bba9ea9494b561f46a4cb9f7997221c75858"
+  },
+  {
+    "name": "019_catalog_revision",
+    "sha256": "a8278dbb10b09f991e28ef8482f09174f37475fd15789cbe4ce0a47da94decb7"
+  },
+  {
+    "name": "020_maintenance_lease",
+    "sha256": "f9b3d8b290ecc21aaaa98c1cd42cc36ddc151e05efc5aa227ae6ae2824a58e44"
+  },
+  {
+    "name": "021_bootstrap_receipt",
+    "sha256": "cde150726940e2fe4dbc0660876cd6bc748a1cd8f94c67483c99885e4e00a13e"
+  }
+]

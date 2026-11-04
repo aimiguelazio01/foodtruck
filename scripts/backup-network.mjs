@@ -2,7 +2,7 @@ import {spawn} from 'node:child_process';
 import {createWriteStream,existsSync} from 'node:fs';
 import {mkdir,cp,unlink} from 'node:fs/promises';
 import {resolve,join} from 'node:path';
-if(existsSync('.env.install'))process.loadEnvFile('.env.install');if(!process.env.DATABASE_URL&&existsSync('.env.local'))process.loadEnvFile('.env.local');if(!process.env.DATABASE_URL&&existsSync('data/network.env'))process.loadEnvFile('data/network.env');
+const selectedEnv=process.env.FOODTRUCK_ENV_FILE||'.env.install';if(existsSync(selectedEnv))process.loadEnvFile(selectedEnv);if(!process.env.DATABASE_URL&&existsSync('.env.local'))process.loadEnvFile('.env.local');if(!process.env.DATABASE_URL&&existsSync('data/network.env'))process.loadEnvFile('data/network.env');
 if(!process.env.DATABASE_URL)throw new Error('DATABASE_URL required');
 const url=new URL(process.env.DATABASE_MIGRATION_URL||process.env.DATABASE_URL),dir=resolve('data/backups',new Date().toISOString().replace(/[:.]/g,'-'));await mkdir(dir,{recursive:true});
 const dump=join(dir,'database.dump');const output=createWriteStream(dump,{mode:0o600});

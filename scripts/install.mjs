@@ -7,7 +7,9 @@ const mode=process.argv[2]||'help';
 try{
  if(mode==='init'){
   if(existsSync('.env.install'))throw new Error('.env.install já existe; não foi alterado.');
-  copyFileSync('.env.install.example','.env.install');console.log('Criado .env.install. Edite as ligações, domínios e segredos; depois execute npm run install:check.');
+  const profile=process.argv.find(arg=>arg.startsWith('--profile='))?.slice(10);
+  if(profile&&!['vercel','cloudflare','docker-local','docker-server'].includes(profile))throw new Error('Perfil inválido.');
+  copyFileSync(profile?'deployment/profiles/'+profile+'.env.example':'.env.install.example','.env.install');console.log('Criado .env.install. Edite as ligações, domínios e segredos; depois execute npm run install:check.');
  }else if(mode==='check'||mode==='doctor'){
   loadInstallEnv();let errors=0;const check=(ok,label)=>{console.log(`${ok?'OK':'ERRO'}: ${label}`);if(!ok)errors++};
   check(Number(process.versions.node.split('.')[0])>=24,'Node.js 24 ou superior');

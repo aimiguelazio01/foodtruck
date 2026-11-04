@@ -1,11 +1,13 @@
+import {findNpmCli} from './npm-cli.mjs';
 import {readFileSync,writeFileSync,copyFileSync,existsSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
+import {dirname,resolve} from 'node:path';
 const app=process.argv[2],api=process.argv[3];
 if(!['customer','management'].includes(app)||!api||new URL(api).protocol!=='https:')throw new Error('Uso: npm run cloudflare:prepare -- customer https://a-sua-api.example.com (ou management).');
 const dir=`apps/${app}`;if(existsSync(`${dir}/wrangler.json`))throw new Error('Já existe wrangler.json. Não foi alterado.');
 const config=JSON.parse(readFileSync('deployment/cloudflare/wrangler.template.json','utf8').replace(/^\uFEFF/,''));config.name=`foodtruck-${app}`;config.services[0].service=config.name;config.vars.INTERNAL_API_URL=api.replace(/\/$/,'');
-writeFileSync(`${dir}/wrangler.json`,JSON.stringify(config,null,2)+'\n');copyFileSync('deployment/cloudflare/open-next.config.mjs',`${dir}/open-next.config.mjs`);
+writeFileSync(`${dir}/wrangler.json`,JSON.stringify(config,null,2)+'\n');copyFileSync('deployment/cloudflare/open-next.config.ts',`${dir}/open-next.config.ts`);
 writeFileSync(`${dir}/public/_headers`,'/_next/static/*\n  Cache-Control: public,max-age=31536000,immutable\n');
 const path=`${dir}/package.json`,pkg=JSON.parse(readFileSync(path,'utf8'));Object.assign(pkg.scripts,{'cf:build':'opennextjs-cloudflare build','cf:preview':'opennextjs-cloudflare preview','cf:deploy':'opennextjs-cloudflare deploy'});writeFileSync(path,JSON.stringify(pkg,null,2)+'\n');
-const npm=process.platform==='win32'?'npm.cmd':'npm';const result=spawnSync(npm,['install','--save-dev','@opennextjs/cloudflare','wrangler','--workspace='+pkg.name],{stdio:'inherit',shell:process.platform==='win32'});if(result.status!==0)throw new Error('Dependências não instaladas. Repita npm install no workspace; consulte o manual.');
+const npmCli=findNpmCli();const result=spawnSync(process.execPath,[npmCli,'install','--save-dev','@opennextjs/cloudflare@1.20.15','wrangler@4.157.0','--workspace='+pkg.name],{stdio:'inherit'});if(result.status!==0)throw new Error('Dependências não instaladas. Repita npm install no workspace; consulte o manual.');
 console.log('Preparado. Configure INTERNAL_API_URL também no ambiente de BUILD. Execute cf:build, cf:preview e só depois cf:deploy nesse workspace. Não foi feita nenhuma publicação.');

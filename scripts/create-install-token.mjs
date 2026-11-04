@@ -1,0 +1,12 @@
+import {randomBytes} from 'node:crypto';
+import {existsSync,readFileSync,writeFileSync} from 'node:fs';
+import {loadInstallEnv} from './install-config.mjs';
+loadInstallEnv();
+const file=process.env.FOODTRUCK_ENV_FILE||'.env.install';
+if(!existsSync(file))throw new Error('Execute install:init primeiro.');
+const token=randomBytes(32).toString('hex'),expires=new Date(Date.now()+3600000).toISOString();
+let content=readFileSync(file,'utf8').replace(/^INSTALL_TOKEN(?:_EXPIRES_AT)?=.*\r?\n?/gm,'');
+writeFileSync(file,content.trimEnd()+`\nINSTALL_TOKEN=${token}\nINSTALL_TOKEN_EXPIRES_AT=${expires}\n`,{mode:0o600});
+console.log('Token privado guardado em '+file+'. Reinicie a API com estas variáveis.');
+console.log(new URL('/setup',process.env.MANAGEMENT_APP_URL||'http://localhost:3001').href+'#token='+token);
+console.log('Expira em '+expires+'. No alojamento web, copie INSTALL_TOKEN e INSTALL_TOKEN_EXPIRES_AT apenas para a API.');

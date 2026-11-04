@@ -1,0 +1,2 @@
+CREATE TABLE network_template_applications (organization_id text NOT NULL REFERENCES organizations(id), request_key text NOT NULL, fingerprint text NOT NULL, PRIMARY KEY(organization_id,request_key));
+CREATE TABLE network_audit (id text PRIMARY KEY, organization_id text NOT NULL REFERENCES organizations(id), user_id text NOT NULL REFERENCES users(id), action text NOT NULL, created_at integer NOT NULL);

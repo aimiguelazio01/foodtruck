@@ -1,0 +1,47 @@
+{
+  "version": "1.1.2",
+  "nodeVersion": "24.18.0",
+  "macpkgCommit": "fed540b6173f5b09690709e38b65465f74768ca6",
+  "targets": [
+    {
+      "id": "windows-x64",
+      "os": "win32",
+      "goos": "windows",
+      "arch": "x64",
+      "goarch": "amd64",
+      "node": "win-x64"
+    },
+    {
+      "id": "macos-arm64",
+      "os": "darwin",
+      "goos": "darwin",
+      "arch": "arm64",
+      "goarch": "arm64",
+      "node": "darwin-arm64"
+    },
+    {
+      "id": "macos-x64",
+      "os": "darwin",
+      "goos": "darwin",
+      "arch": "x64",
+      "goarch": "amd64",
+      "node": "darwin-x64"
+    },
+    {
+      "id": "linux-x64",
+      "os": "linux",
+      "goos": "linux",
+      "arch": "x64",
+      "goarch": "amd64",
+      "node": "linux-x64"
+    },
+    {
+      "id": "linux-arm64",
+      "os": "linux",
+      "goos": "linux",
+      "arch": "arm64",
+      "goarch": "arm64",
+      "node": "linux-arm64"
+    }
+  ]
+}

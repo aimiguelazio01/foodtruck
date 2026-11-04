@@ -1,0 +1,5 @@
+{
+ "extends":"../services/api/tsconfig.json",
+ "compilerOptions":{"noEmit":false,"outDir":"../output/desktop-compiled","rootDir":".."},
+ "include":["../services/api/src","../services/api/scripts/migrate.ts","../services/api/scripts/seed-demo.ts","../packages/backend/index.ts"]
+}

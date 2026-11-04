@@ -11,3 +11,5 @@ output
 public/images/food-atlas.png
 **/.next
 **/node_modules
+
+.foodtruck

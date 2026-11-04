@@ -43,7 +43,7 @@ export default function Account(){
   try{const r=await fetch('/api/v1/customer/'+(resend?'resend-verification':mode),{method:'POST',credentials:'include',headers:{'content-type':'application/json'},body:JSON.stringify({email:f.get('email'),password:f.get('password')})});const d=await r.json();
    if(!r.ok){const text=d.message||d.error;throw Error(text==='Invalid credentials'?'Email ou palavra-passe da conta de cliente incorretos.':text==='Account already exists'?'Esta conta já existe. Entre na conta ou use «Reenviar confirmação» se ainda não a confirmou.':text==='Verify your email first'?'Confirme o seu email antes de entrar. Pode pedir um novo email no botão «Reenviar confirmação».':text||'Não foi possível continuar.');}
    if(resend){setMessage('Se existir uma conta por confirmar, foi pedido um novo email de confirmação. Verifique também a pasta de spam.');}
-   else if(mode==='register'){setMessage('Verifique o seu email para ativar a conta. Depois entre para associar a encomenda.');setMode('login');}
+   else if(mode==='register'){setMessage(d.demoVerified?'Conta de demonstração criada e ativa. Pode entrar; não é enviado email real.':'Verifique o seu email para ativar a conta. Depois entre para associar a encomenda.');setMode('login');}
    else{setCustomer(d.customer);window.dispatchEvent(new Event('customer-session-changed'));}
   }catch(e){setError(e instanceof Error?e.message:'Não foi possível continuar.');}finally{setBusy(false);}
  }

@@ -1,32 +1,49 @@
-"""Build a redistributable source ZIP without operational data or secrets."""
+"""Explicit, Git-independent source release. Never walks operational directories."""
 from pathlib import Path
-import subprocess,zipfile,hashlib,json,re,sys
-root=Path(__file__).resolve().parents[1]
-raw=subprocess.check_output(['git','-c','safe.directory='+root.as_posix(),'ls-files','--cached','--others','--exclude-standard','-z'],cwd=root)
-paths=sorted(set(p for p in raw.decode('utf-8').split('\0') if p))
-excluded={'.git','.vercel','.codex','.agents','node_modules','.next','.open-next','.wrangler','data','tmp','output','release','test-results','playwright-report','.npm-cache'}
-files=[]
-secret=re.compile(rb'(?:xkeysib|xsmtpsib)-[A-Za-z0-9_-]{35,}|sb_secret_[A-Za-z0-9_-]{25,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----')
-for relative in paths:
- p=Path(relative)
- if any(part in excluded for part in p.parts):continue
- if p.name.startswith('.env') and not p.name.endswith('.example'):continue
- if p.name.startswith('.dev.vars') and not p.name.endswith('.example'):continue
- if p.suffix.lower() in {'.sqlite','.sqlite3','.db','.dump','.log','.tsbuildinfo'}:continue
- full=root/p
- if not full.is_file() or full.is_symlink():continue
- if full.stat().st_size<5_000_000 and p.suffix.lower() not in {'.png','.jpg','.jpeg','.webp','.pdf','.woff','.woff2','.ttf','.mp4'}:
-  if secret.search(full.read_bytes()):raise RuntimeError('Possible secret in '+relative+'; release aborted, value not displayed.')
- files.append(p)
-required=['package.json','package-lock.json','.env.install.example','compose.install.yaml','docs/manuals/Manual_Food_Truck_Live_PT.pdf','docs/manuals/Manual_Instalacao_Food_Truck_Live_PT.pdf']
-for name in required:
- if Path(name) not in files:raise RuntimeError('Missing release file: '+name)
-out=root/'release';out.mkdir(exist_ok=True)
-manifest={'edition':'2026-11-03','files':{p.as_posix():hashlib.sha256((root/p).read_bytes()).hexdigest() for p in files},'excluded':'operational data, secrets, caches, dependencies'}
-archive=out/'Food_Truck_Live_Instalacao.zip'
-with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED,compresslevel=6) as z:
- for p in files:z.write(root/p,'foodtruck/'+p.as_posix())
- z.writestr('foodtruck/RELEASE-MANIFEST.json',json.dumps(manifest,ensure_ascii=False,indent=2))
-checksum=hashlib.sha256(archive.read_bytes()).hexdigest();(out/'SHA256SUMS.txt').write_text(checksum+'  '+archive.name+'\n',encoding='utf-8')
-print('Release:',archive.name,'|',len(files),'files |',round(archive.stat().st_size/1048576,1),'MiB')
-print('SHA256:',checksum)
+import zipfile,hashlib,json,re,os
+ROOT=Path(__file__).resolve().parents[1]
+def collect(root=ROOT):
+ spec=json.loads((root/'scripts/release-files.json').read_text(encoding='utf-8-sig'))
+ files=set()
+ def add(relative):
+  p=root/relative
+  if p.is_symlink() or not p.is_file():raise RuntimeError('Missing/unsafe release file: '+str(relative))
+  if not p.resolve().is_relative_to(root.resolve()):raise RuntimeError('File outside release root')
+  files.add(p.relative_to(root))
+ for name in spec['files']:add(name)
+ for tree in spec['trees']:
+  base=root/tree
+  if not base.is_dir() or base.is_symlink():raise RuntimeError('Missing/unsafe release directory: '+tree)
+  for folder,dirs,names in os.walk(base,followlinks=False):
+   dirs[:]=[d for d in dirs if d not in {'node_modules','.next','dist','.open-next','.wrangler','__pycache__'} and not (Path(folder)/d).is_symlink()]
+   for name in names:
+    p=Path(folder)/name
+    if p.is_symlink():raise RuntimeError('Symlink in release directory')
+    if name.endswith(('.tsbuildinfo','.log','.dump','.sqlite','.sqlite3','.db','.pyc')) or name.startswith(('.env','.dev.vars')):continue
+    add(p.relative_to(root))
+ for workspace in ['apps/customer','apps/management','services/api']:
+  for name in spec['workspaceFiles']:
+   if (root/workspace/name).is_file():add(Path(workspace)/name)
+ for name in spec['apiScripts']:add(Path('services/api/scripts')/name)
+ secret=re.compile(rb'(?:xkeysib|xsmtpsib)-[A-Za-z0-9_-]{35,}|sb_secret_[A-Za-z0-9_-]{25,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----')
+ for relative in files:
+  p=root/relative
+  if p.suffix.lower() not in {'.png','.jpg','.jpeg','.webp','.pdf','.woff','.woff2','.ttf','.mp4'} and secret.search(p.read_bytes()):raise RuntimeError('Possible secret; release aborted: '+str(relative))
+ return sorted(files)
+def build(root=ROOT):
+ files=collect(root);version=json.loads((root/'package.json').read_text())['version']
+ if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+(?:-[a-zA-Z0-9.-]+)?',version):raise RuntimeError('Invalid version')
+ out=root/'release'/'marketplace';out.mkdir(parents=True,exist_ok=True)
+ manifest={'version':version,'files':{p.as_posix():hashlib.sha256((root/p).read_bytes()).hexdigest() for p in files},'excluded':'operational data, secrets, legacy runtime, caches, dependencies, external universal starter'}
+ archive=out/f'Food_Truck_Live-{version}.zip'
+ with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED,compresslevel=6) as z:
+  for p in files:z.write(root/p,'foodtruck/'+p.as_posix())
+  z.writestr('foodtruck/RELEASE-MANIFEST.json',json.dumps(manifest,ensure_ascii=False,indent=2))
+ checksum=hashlib.sha256(archive.read_bytes()).hexdigest()
+ starter=(root/'scripts/marketplace-start.mjs').read_text(encoding='utf-8')
+ starter=starter.replace('__FOODTRUCK_ARCHIVE__',archive.name).replace('__FOODTRUCK_SHA256__',checksum).replace('__FOODTRUCK_VERSION__',version)
+ (out/'INICIAR.mjs').write_text(starter,encoding='utf-8',newline='\n')
+ print(f'Release: {archive.name} | {len(files)} files | {archive.stat().st_size/1048576:.1f} MiB')
+ print('SHA256: '+checksum)
+ return archive
+if __name__=='__main__':build()

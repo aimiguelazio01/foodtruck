@@ -1,4 +1,4 @@
-import EmbeddedPostgres from 'embedded-postgres';
+import EmbeddedPostgres from './local-cluster.mjs';
 import {existsSync,mkdirSync,writeFileSync,readFileSync} from 'node:fs';
 import {randomBytes} from 'node:crypto';
 mkdirSync('data',{recursive:true});

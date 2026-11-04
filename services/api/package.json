@@ -7,7 +7,6 @@
     "start": "node dist/services/api/src/server.js",
     "build": "tsc -p tsconfig.build.json",
     "migrate": "tsx scripts/migrate.ts",
-    "import:sqlite": "tsx scripts/import-sqlite.ts",
     "typecheck": "tsc --noEmit",
     "worker": "tsx src/worker.ts",
     "validate": "tsx scripts/validate.ts"

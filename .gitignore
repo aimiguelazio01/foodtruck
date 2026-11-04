@@ -19,7 +19,20 @@ supabase/.temp/
 
 !.env.install.example
 **/.open-next/
+**/wrangler.foodtruck.json
 **/.wrangler/
 **/.dev.vars*
 !**/.dev.vars.example
 release/
+output/distribution/
+output/pdf/qa/
+__pycache__/
+
+.foodtruck/
+
+output/installers/
+output/cloudflare/
+output/cloudflare-inspect/
+output/desktop-compiled/
+desktop/cloud-installer/src-tauri/target/
+desktop/cloud-installer/src-tauri/binaries/

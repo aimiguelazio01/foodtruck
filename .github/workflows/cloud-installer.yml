@@ -1,0 +1,64 @@
+name: Cloud installer integration builds
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - desktop/cloud-installer/**
+      - desktop/launcher/**
+      - .github/workflows/cloud-installer.yml
+
+permissions:
+  contents: read
+
+jobs:
+  installer:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bundle: nsis
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            bundle: dmg
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+            bundle: dmg
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            bundle: appimage
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: desktop/launcher/go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Linux runtime build dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev patchelf
+      - name: Test deployment engine
+        run: go -C desktop/launcher test ./...
+      - name: Build bundled engine
+        env:
+          FOODTRUCK_LICENSE_PUBLIC_KEY: ${{ vars.FOODTRUCK_LICENSE_PUBLIC_KEY }}
+        run: node desktop/cloud-installer/prepare-engine.mjs ${{ matrix.target }}
+      - name: Install Tauri build CLI
+        run: cargo install tauri-cli --version '^2' --locked
+      - name: Build integration installer
+        working-directory: desktop/cloud-installer
+        run: cargo tauri build --bundles ${{ matrix.bundle }}
+      - name: Collect integration packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: Food-Truck-Cloud-integration-${{ matrix.target }}
+          path: |
+            desktop/cloud-installer/src-tauri/target/release/bundle/nsis/*.exe
+            desktop/cloud-installer/src-tauri/target/release/bundle/dmg/*.dmg
+            desktop/cloud-installer/src-tauri/target/release/bundle/appimage/*.AppImage
+          if-no-files-found: error

@@ -2,7 +2,7 @@ import {spawn,spawnSync} from 'node:child_process';
 import net from 'node:net';
 import {existsSync} from 'node:fs';
 import {resolve} from 'node:path';
-if(existsSync('.env.install'))process.loadEnvFile('.env.install');
+const selectedEnv=process.env.FOODTRUCK_ENV_FILE||'.env.install';if(existsSync(selectedEnv))process.loadEnvFile(selectedEnv);
 if(!process.env.DATABASE_URL&&existsSync('.env.local'))process.loadEnvFile('.env.local');
 if(!process.env.DATABASE_URL&&existsSync('data/network.env'))process.loadEnvFile('data/network.env');
 for(const key of ['DATA_DIRECTORY','DATABASE_CA_CERT_FILE'])if(process.env[key])process.env[key]=resolve(process.env[key]);

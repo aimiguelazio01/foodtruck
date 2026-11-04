@@ -3,7 +3,7 @@ const color=(value:unknown,label:string)=>{if(typeof value!=='string'||!/^#[0-9a
 export function brandingValues(body:any){
  if(typeof body.name!=='string'||!body.name.trim()||body.name.length>100)fail('Nome do negócio: introduza entre 1 e 100 caracteres.');
  const name=body.name.trim(),primary=color(body.color,'Cor principal');
- const fields=['description','contact','secondary_color','accent_color','appearance','social_links','slot_capacity','retention_days','logo','cover'];
+ const fields=['description','contact','secondary_color','accent_color','background_color','font_family','page_layout','appearance','social_links','slot_capacity','retention_days','logo','cover'];
  const settings:Record<string,string|number>={};
  for(const key of fields){
   const value=body[key];if(value===undefined)continue;
@@ -16,6 +16,9 @@ export function brandingValues(body:any){
   const labels:Record<string,string>={description:'Descrição',contact:'Contacto público',logo:'Logótipo',cover:'Fotografia da carrinha',social_links:'Redes sociais e site',appearance:'Aparência'};
   if(typeof value!=='string'||value.length>1000)fail((labels[key]||key)+': utilize texto com até 1000 caracteres.');
   const content=(value as string).trim();
+  if(key==='background_color'){settings[key]=content?color(content,'Cor de fundo'):'';continue;}
+  if(key==='font_family'&&!['original','modern','rounded','classic'].includes(content))fail('Escolha um tipo de letra disponível.');
+  if(key==='page_layout'&&!['standard','compact','showcase'].includes(content))fail('Escolha um layout disponível.');
   if(key.endsWith('_color')){settings[key]=color(content,key==='secondary_color'?'Cor secundária':'Cor de destaque');continue;}
   if(key==='appearance'&&!['light','dark'].includes(content))fail('Aparência: escolha Clara ou Escura.');
   if(['logo','cover'].includes(key)&&content&&!/^\/uploads\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.webp$/.test(content))fail(labels[key]+': volte a carregar uma imagem PNG, JPEG ou WebP no editor e guarde as alterações.');

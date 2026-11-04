@@ -1,1 +1,1 @@
-export async function appBranding(){try{const r=await fetch((process.env.INTERNAL_API_URL||'http://localhost:4000')+'/api/v1/public/app-settings',{cache:'no-store'});if(r.ok)return await r.json()}catch{}return {app_name:'Food Truck Live',secondary_color:'#20271f',logo:''}}
+export { readAppBranding as appBranding } from '../../../packages/backend/app-branding';
