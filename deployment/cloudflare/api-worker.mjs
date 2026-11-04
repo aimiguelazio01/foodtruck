@@ -181,8 +181,11 @@ export default {
         return await login(request, env);
       }
       return await handleInstallation(request, env) ?? json({ message: 'Página não encontrada.' }, 404);
-    } catch {
-      return json({ message: 'Serviço temporariamente indisponível.' }, 503);
+    } catch (error) {
+      // Log only the route and error class/message under a short id; never request bodies, cookies or tokens.
+      const errorId = crypto.randomUUID().slice(0, 8);
+      console.error(`api-error ${errorId} ${request.method} ${new URL(request.url).pathname} ${error?.name ?? 'Error'}: ${String(error?.message ?? error).slice(0, 200)}`);
+      return json({ message: 'Serviço temporariamente indisponível.', errorId }, 503);
     }
   },
 };
