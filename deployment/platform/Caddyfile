@@ -2,7 +2,7 @@
     admin off
 }
 
-instalar.migfoodtruck.pt {
+{$PLATFORM_PUBLIC_HOST} {
     # Do not retain OAuth query codes, bearer tokens or cookies in request logs.
     log {
         output stdout

@@ -22,6 +22,12 @@ import (
 )
 
 func main() {
+	if exit, handled := checkCommand(os.Args[1:]); handled {
+		os.Exit(exit)
+	}
+	if exit, handled := demoInstallCommand(os.Args[1:]); handled {
+		os.Exit(exit)
+	}
 	key, e := base64.RawURLEncoding.DecodeString(os.Getenv("PLATFORM_ENCRYPTION_KEY"))
 	if e != nil || len(key) != 32 {
 		log.Fatal("Configure PLATFORM_ENCRYPTION_KEY: 32 random bytes, base64url")

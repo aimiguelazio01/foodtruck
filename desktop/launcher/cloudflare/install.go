@@ -27,6 +27,8 @@ type InstallOptions struct {
 	PublicKey         ed25519.PublicKey
 	CostsApproved     bool
 	ImagesApproved    bool
+	Demo              bool
+	DemoToken         string
 }
 
 func (c *Client) InstallApplication(ctx context.Context, directory, packageDirectory, account string, options InstallOptions) (ApplicationAddresses, error) {
@@ -156,6 +158,6 @@ func (c *Client) installApplication(ctx context.Context, directory, packageDirec
 		return empty, err
 	}
 	return c.publishVerifiedApplication(ctx, directory, packageDirectory, account, ApplicationPublishOptions{
-		ImagesApproved: options.ImagesApproved, AllowIntegrationPreview: pilot, SubscriptionURL: options.SubscriptionURL, SubscriptionToken: options.SubscriptionToken, MailAPIKey: options.MailAPIKey, MailFrom: options.MailFrom, SiteDomain: options.SiteDomain, Progress: options.Progress, BackupToken: options.BackupToken,
+		ImagesApproved: options.ImagesApproved, AllowIntegrationPreview: pilot, SubscriptionURL: options.SubscriptionURL, SubscriptionToken: options.SubscriptionToken, MailAPIKey: options.MailAPIKey, MailFrom: options.MailFrom, SiteDomain: options.SiteDomain, Progress: options.Progress, BackupToken: options.BackupToken, Demo: options.Demo, DemoToken: options.DemoToken,
 	}, manifest)
 }

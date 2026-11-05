@@ -16,9 +16,19 @@ Implementado e testado com Cloudflare, Stripe e Brevo **simulados** (nada foi ex
 - **Barreira de alojamento no Worker:** estado em memória 5 min (suspenso 1 min) e guardado em D1 (migração `023_hosting_status`); se o portal falhar, um site confirmado ativo nas últimas 72 h continua a servir. Nunca desbloqueia um site suspenso ou desconhecido. Instalações anteriores à migração não têm o estado guardado até serem republicadas.
 - **Portal:** `/` é um assistente em quatro passos (conta, negócio, progresso automático, pronto com QR e subscrição); `/avancado` mantém o fluxo antigo (código de compra, conta Cloudflare própria, backups e validações); `/admin` mostra estado do plano e fim de teste.
 
+**Montagem real:** guia passo a passo das contas (Cloudflare, domínio, túnel, Brevo, Stripe) em [`docs/SETUP_REAL.md`](../../docs/SETUP_REAL.md) e checklist de aceitação em [`docs/TESTE_FINAL.md`](../../docs/TESTE_FINAL.md). `node scripts/platform-secrets.mjs` gera os segredos locais e a chave de assinatura. `docker compose … --profile tunnel up` publica o portal a partir de um PC por Cloudflare Tunnel, e `--profile public` usa o Caddy num servidor. `docker compose … run --rm service -check` confirma a configuração real só com consultas de leitura, sem mostrar segredos.
+
 Ainda por verificar ou fazer:
 
 - Primeira instalação real numa conta Cloudflare Workers Paid, incluindo as causas do HTTP 503 e o tempo de CPU do início de sessão (PBKDF2 a 600 000 iterações).
+  Para diagnosticar, correr `npx wrangler tail <worker-da-api> --format json` durante o teste. Cada 503 (erro não tratado,
+  verificação do alojamento, instalação, imagens) deixa uma linha JSON `"event":"api-error"` com `route` (método e caminho
+  com identificadores trocados por `:param`, sem query), `stage` (`hosting-gate`, `backend`, `worker-route`, `staff-auth`,
+  `account-route`, `installation:password`…), `error`, `message` (até 200 caracteres, sem URLs, emails nem tokens),
+  `requestId` (igual ao `errorId` devolvido ao cliente) e `ray`. Cada início de sessão de equipa ou cliente deixa
+  `"event":"pbkdf2"` com `kind`, `impl` (`webcrypto` ou `noble`, a alternativa quando o limite de iterações é imposto) e
+  `durationMs`. Nos Workers o relógio só avança com I/O: um `durationMs` de 0 não significa custo zero, usar então o
+  tempo de CPU do evento do tail. Nenhuma linha leva corpos, cookies, emails, palavras-passe nem tokens.
 - Chamadas à API Cloudflare escritas de memória: domínios de Workers (`/workers/domains`) e regra de ciclo de vida do R2 (`/r2/buckets/{nome}/lifecycle`). Confirmar na documentação atual.
 - Formato dos eventos Stripe (tratados nos formatos antigo e novo da fatura), em modo de teste com `stripe listen`.
 - Domínio, DNS, certificados, servidor, chaves e Brevo com domínio do remetente autenticado (SPF/DKIM).

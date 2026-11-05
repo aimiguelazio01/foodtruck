@@ -69,8 +69,12 @@ func (c *Client) attachWorkerDomain(ctx context.Context, account, zone, hostname
 		}
 		return errors.New("The chosen address is already in use")
 	}
-	_, err := c.request(ctx, http.MethodPut, "/accounts/"+account+"/workers/domains", map[string]string{
-		"hostname": hostname, "service": service, "zone_id": zone, "environment": "production"}, nil)
+	// PUT /accounts/{id}/workers/domains takes hostname, service, zone_id (and optional
+	// zone_name/enabled/previews_enabled); "environment" is no longer an accepted input.
+	// The API does not document refusing a hostname bound to another Worker, which is why the
+	// lookup above must run first.
+	_, err := c.request(ctx, http.MethodPut, "/accounts/"+account+"/workers/domains", map[string]any{
+		"hostname": hostname, "service": service, "zone_id": zone, "enabled": true}, nil)
 	return err
 }
 

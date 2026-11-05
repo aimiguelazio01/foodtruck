@@ -1,10 +1,13 @@
 services:
+  # Option 1 (a server with a public IP): Caddy obtains the certificate and serves PLATFORM_PUBLIC_HOST.
   https:
     image: caddy:2
     profiles: [public]
     depends_on:
       - portal
       - service
+    environment:
+      PLATFORM_PUBLIC_HOST: ${PLATFORM_PUBLIC_HOST:-}
     ports:
       - 80:80
       - 443:443
@@ -12,6 +15,27 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - certificates:/data
       - caddy_config:/config
+    restart: unless-stopped
+  # Option 2 (a PC with no open ports): a Cloudflare Tunnel publishes the portal over HTTPS.
+  # The routes (host -> http://portal:4200, path ^/stripe/webhook -> http://service:4100)
+  # are configured on the tunnel in the Cloudflare dashboard; see docs/SETUP_REAL.md.
+  tunnel:
+    image: cloudflare/cloudflared:2025.4.0
+    profiles: [tunnel]
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - portal
+      - service
+    restart: unless-stopped
+  # Option 3 (free test, no domain): a quick tunnel gives the portal a temporary https://*.trycloudflare.com
+  # address. Start it first (`docker compose --profile quick up -d quick`), read the address from
+  # `docker compose logs quick`, put it in PLATFORM_ORIGIN, then start the rest. The address changes on restart.
+  quick:
+    image: cloudflare/cloudflared:2025.4.0
+    profiles: [quick]
+    command: tunnel --no-autoupdate --url http://portal:4200
     restart: unless-stopped
   database:
     image: postgres:18
@@ -39,6 +63,10 @@ services:
       PLATFORM_LISTEN: 0.0.0.0:4100
       PLATFORM_JOURNAL_DIRECTORY: /data/journals
       PLATFORM_PACKAGE_DIRECTORY: /package
+    # Loopback only: lets `stripe listen --forward-to localhost:4100/stripe/webhook` reach the service
+    # when the portal has no permanent public address (free test without a domain).
+    ports:
+      - 127.0.0.1:4100:4100
     volumes:
       - journals:/data
       - ${PLATFORM_PACKAGE_HOST_PATH:?Set the signed package directory}:/package:ro
@@ -50,6 +78,9 @@ services:
     environment:
       PLATFORM_INTERNAL_URL: http://service:4100
       PLATFORM_ORIGIN: ${PLATFORM_ORIGIN:?Set the public origin}
+      # Optional: the shared demonstration site (written by `platform -demo-install`).
+      PLATFORM_DEMO_CUSTOMER_URL: ${PLATFORM_DEMO_CUSTOMER_URL:-}
+      PLATFORM_DEMO_MANAGEMENT_URL: ${PLATFORM_DEMO_MANAGEMENT_URL:-}
     ports:
       - 127.0.0.1:4200:4200
     restart: unless-stopped

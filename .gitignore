@@ -36,3 +36,7 @@ output/cloudflare-inspect/
 output/desktop-compiled/
 desktop/cloud-installer/src-tauri/target/
 desktop/cloud-installer/src-tauri/binaries/
+
+# Platform signing keys (private)
+deployment/platform/keys/
+*.pem

@@ -79,3 +79,10 @@ export function stripeUrl(url: unknown, host: 'checkout.stripe.com' | 'billing.s
     return undefined;
   }
 }
+
+/** Links to the shared demonstration site; null unless both are plain https site addresses (the operator sets them in .env). */
+export function demoLinks(customer?: string, management?: string): { customer: string; management: string } | null {
+  const site = safeSiteLink(customer?.trim());
+  const manage = safeSiteLink(management?.trim());
+  return site && manage ? { customer: site.replace(/\/$/, ''), management: manage.replace(/\/$/, '') } : null;
+}

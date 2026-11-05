@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guia de montagem real</title>
+<style>
+:root{--bg:#faf8f5;--card:#fff;--ink:#1f2328;--mute:#6b7280;--line:#e5e1da;--accent:#c2410c;--accent-ink:#fff;--ok:#15803d;--code:#f3efe8}
+@media (prefers-color-scheme:dark){:root{--bg:#17191c;--card:#202328;--ink:#e8e6e3;--mute:#9aa0a6;--line:#33373d;--accent:#fb923c;--accent-ink:#1a1a1a;--ok:#4ade80;--code:#2a2d33}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 system-ui,-apple-system,Segoe UI,sans-serif}
+.wrap{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
+nav{border-right:1px solid var(--line);padding:20px 14px;position:sticky;top:0;height:100vh;overflow:auto}
+nav h1{font-size:17px;margin:0 0 2px}
+nav .sub{color:var(--mute);font-size:13px;margin-bottom:12px}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin:8px 0 14px}
+.bar i{display:block;height:100%;width:0;background:var(--ok);transition:width .2s}
+nav button.item{display:flex;gap:8px;align-items:flex-start;width:100%;text-align:left;background:none;border:0;color:var(--ink);padding:8px 10px;border-radius:8px;cursor:pointer;font:inherit;font-size:15px}
+nav button.item:hover,nav button.item.on{background:var(--code)}
+nav button.item.on{font-weight:600}
+nav .n{flex:none;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);font-size:12px;display:grid;place-items:center}
+nav .item.done .n{background:var(--ok);border-color:var(--ok);color:#fff}
+main{padding:28px clamp(16px,4vw,48px) 80px;max-width:900px}
+h2{font-size:27px;margin:0 0 4px}
+.lead{color:var(--mute);margin:0 0 20px}
+.time{display:inline-block;background:var(--code);border-radius:999px;padding:2px 12px;font-size:13px;color:var(--mute);margin-bottom:14px}
+ol.steps{list-style:none;counter-reset:s;margin:0 0 18px;padding:0}
+ol.steps>li{counter-increment:s;position:relative;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px 14px 56px;margin-bottom:12px}
+ol.steps>li::before{content:counter(s);position:absolute;left:16px;top:14px;width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;font-size:14px}
+ol.steps>li.done{opacity:.55}
+li label.chk{margin-top:10px;font-size:14px;color:var(--mute);cursor:pointer;display:flex;gap:6px;align-items:center;justify-content:flex-end}
+li label.chk input{width:17px;height:17px;accent-color:var(--ok)}
+li p{margin:0 0 8px}
+figure{margin:10px 0 0}
+figure img{display:block;max-width:100%;border:1px solid var(--line);border-radius:10px;cursor:zoom-in}
+figcaption{font-size:14px;color:var(--mute);margin-top:4px}
+.warn,.tip{border-left:4px solid var(--accent);background:var(--card);border-radius:0 10px 10px 0;padding:10px 14px;margin:0 0 14px;font-size:15px}
+.tip{border-color:var(--ok)}
+pre{position:relative;background:var(--code);border-radius:8px;padding:10px 90px 10px 12px;margin:6px 0;overflow:auto;font:14px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-all}
+.cp{position:absolute;right:8px;top:8px;font-size:12px;padding:3px 10px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+table{border-collapse:collapse;width:100%;font-size:15px;margin:6px 0 14px}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--code)}
+a{color:var(--accent)}
+code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:.92em}
+.nav2{display:flex;justify-content:space-between;margin-top:22px}
+.btn{font:inherit;padding:10px 20px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.btn.p{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+#zoom{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;padding:16px;z-index:9;cursor:zoom-out}
+#zoom img{max-width:100%;max-height:100%;border-radius:8px}
+@media (max-width:760px){.wrap{grid-template-columns:1fr}nav{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}ol.steps>li{padding-left:50px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav>
+  <h1>Montagem real</h1>
+  <div class="sub">Food Truck Live · modo gratuito, sem domínio</div>
+  <div class="bar"><i id="bar"></i></div>
+  <div id="menu"></div>
+</nav>
+<main><div id="step"></div></main>
+</div>
+<div id="zoom"><img alt=""></div>
+<script>
+const S=(k,v)=>{try{if(v===undefined)return localStorage.getItem('guia2.'+k);localStorage.setItem('guia2.'+k,v)}catch{return null}};
+const L=(t,u)=>`<a href="${u}" target="_blank" rel="noopener">${t}</a>`;
+const C=t=>`<pre>${t}<button class="cp" type="button">Copiar</button></pre>`;
+const F=(src,cap)=>`<figure><img src="img/${src}" loading="lazy" alt="${cap}"><figcaption>${cap}</figcaption></figure>`;
+const SECRET='<div class="warn"><b>Segredos:</b> nunca os cole numa conversa nem num email. Cada chave vai só para o ficheiro <code>deployment/platform/.env</code> (já está protegido, não vai para o Git).</div>';
+
+// Each step: title, short lead, time, list of actions (html). Every action can be ticked.
+const steps=[
+{t:'Antes de começar',time:'5 min',lead:'Veja o que vai precisar e quanto custa. Depois são 7 passos curtos.',a:[
+`<p><b>No seu PC (Windows, 64 bits):</b> a pasta do projeto, o <b>Node</b> e o <b>Go</b> instalados.</p>`,
+`<p><b>Um email seu</b> e <b>um cartão</b> (só para a Cloudflare).</p>
+<table><tr><th>Serviço</th><th>Para quê</th><th>Custo</th></tr>
+<tr><td>Cloudflare</td><td>Aloja os sites dos clientes</td><td>5 USD por mês (Workers Paid)</td></tr>
+<tr><td>Brevo</td><td>Envia os emails</td><td>Grátis até 300 por dia</td></tr>
+<tr><td>Stripe</td><td>Cobra a mensalidade</td><td>Grátis em teste</td></tr></table>`,
+`<div class="tip">Neste modo <b>não precisa de domínio</b>. Os sites ficam em endereços <code>…workers.dev</code>. Com domínio próprio, os emails não vão para spam: veja <code>docs/SETUP_REAL.md</code>.</div>`
+]},
+{t:'Cloudflare',time:'15 min',lead:'Conta, plano pago e uma chave com permissões mínimas.',a:[
+`<p>Crie conta em ${L('dash.cloudflare.com/sign-up','https://dash.cloudflare.com/sign-up')} e confirme o email.</p>${F('cf-01-inicio.jpg','O painel da Cloudflare depois de entrar.')}`,
+`<p>Abra ${L('Workers plans','https://dash.cloudflare.com/?to=/:account/workers/plans')} e clique em <b>Upgrade</b> no plano Paid (5 USD por mês).</p>${F('cf-02-planos.jpg','Plano Free: clique em Upgrade no plano Paid.')}<div class="warn">O plano Free <b>não serve</b>: só dá 10 ms de CPU por pedido e o login dos sites falha.</div>`,
+`<p>Confirme que o botão do plano Paid diz <b>Current plan</b>.</p>${F('cf-03-paid-ativo.jpg','Plano Paid ativo.')}`,
+`<p>Abra ${L('API Tokens','https://dash.cloudflare.com/profile/api-tokens')} → <b>Create Token</b> → <b>Create Custom Token</b> → <b>Get started</b>.</p>${F('cf-04-criar-token.jpg','Escolha “Create Custom Token”.')}`,
+`<p>Nome: <code>food-truck-instalador</code>. Adicione <b>5 permissões, todas de Account</b>:</p>
+<table><tr><th>Recurso</th><th>Nível</th></tr><tr><td>Workers Scripts</td><td>Edit</td></tr><tr><td>D1</td><td>Edit</td></tr><tr><td>Workers R2 Storage</td><td>Edit</td></tr><tr><td>Account Settings</td><td>Read</td></tr><tr><td>Billing</td><td>Read</td></tr></table>${F('cf-06-token-permissoes.jpg','O formulário com as 5 permissões.')}`,
+`<p>Clique em <b>Continue to summary</b>, confira e clique em <b>Create Token</b>.</p>${F('cf-07-token-resumo.jpg','O resumo antes de criar.')}`,
+`<p>A Cloudflare mostra o token <b>uma única vez</b>. Clique em <b>Copy</b>. Abra <code>deployment/platform/.env</code>, cole depois de <code>PLATFORM_CLOUDFLARE_TOKEN=</code> (sem espaços nem aspas) e grave.</p>${SECRET}`,
+`<p>O <b>Account ID</b> é o número comprido no endereço da página, a seguir a <code>dash.cloudflare.com/</code>. Cole-o depois de <code>PLATFORM_CLOUDFLARE_ACCOUNT=</code>.</p>`
+]},
+{t:'Brevo (emails)',time:'10 min',lead:'Sem isto, nenhum email de confirmação chega.',a:[
+`<p>Crie conta em ${L('brevo.com','https://app.brevo.com/')} e entre.</p>`,
+`<p>Abra ${L('Senders','https://app.brevo.com/senders/list')}. O seu email deve aparecer como <b>Verified</b>.</p>${F('br-01-remetentes.jpg','A página dos remetentes.')}<div class="tip">Com um email Gmail, as mensagens podem ir para o <b>spam</b>. Para o teste serve. Para clientes reais, use um domínio próprio.</div>`,
+`<p>No <code>.env</code>, preencha <code>PLATFORM_MAIL_FROM=Food Truck Live &lt;o-seu-email&gt;</code>.</p>`,
+`<p>Abra ${L('SMTP &amp; API → API keys','https://app.brevo.com/settings/keys/api')} → <b>Generate API key</b>.</p>${F('br-02-chaves-api.jpg','A página das chaves API.')}`,
+`<p>Escolha acesso <b>Restricted</b> e ative só duas coisas: <b>Transactional email → All</b> e <b>Account → Read</b>. Clique em <b>Generate</b>.</p>${F('br-03-permissoes.jpg','As duas permissões da chave.')}<div class="warn">Se aparecer “Select at least one permission”, falta ativar uma destas duas.</div>`,
+`<p>Copie a chave e cole no <code>.env</code> depois de <code>PLATFORM_BREVO_API_KEY=</code>.</p>${SECRET}`
+]},
+{t:'Stripe (pagamentos de teste)',time:'10 min',lead:'Usamos o modo de teste: ninguém paga de verdade.',a:[
+`<p>Crie conta ou entre em ${L('dashboard.stripe.com','https://dashboard.stripe.com/test/dashboard')}. Fique sempre em <b>modo de teste</b> (a faixa “Sandbox” no topo).</p>`,
+`<p>Abra ${L('Product catalog','https://dashboard.stripe.com/test/products')} → <b>Create product</b>. Nome: <code>Alojamento Food Truck Live</code>. Preço <b>Recurring</b>, <b>Monthly</b>, em <b>EUR</b> (por exemplo 15,00).</p>${F('st-01-catalogo.jpg','O catálogo de produtos, ainda vazio.')}`,
+`<p>Depois de criar, abra o produto e copie o <b>ID do preço</b> (começa por <code>price_</code>) para <code>STRIPE_PRICE_ID=</code> no <code>.env</code>.</p>${F('st-02-produto-criado.jpg','O produto criado, com o preço mensal.')}`,
+`<p>Abra ${L('API keys','https://dashboard.stripe.com/test/apikeys')}, clique no ícone de copiar da <b>Secret key</b> e cole em <code>STRIPE_SECRET_KEY=</code>. Tem de começar por <code>sk_test_</code>.</p><div class="warn">Se começar por <code>sk_live_</code>, <b>pare</b>: é dinheiro real.</div>${SECRET}`
+]},
+{t:'Instalar no PC',time:'30 min',lead:'Três ferramentas. A que dá mais trabalho é o Docker.',a:[
+`<p><b>Docker Desktop, versão AMD64</b> (a normal para PCs Intel e AMD):</p>${C('https://desktop.docker.com/win/main/amd64/Docker%20Desktop%20Installer.exe')}<div class="warn">Não use a versão ARM64: dá “This app can’t run on your PC”.</div>`,
+`<p>Execute o instalador escolhendo <b>All-users installation</b> (precisa de administrador). Reinicie o PC se pedir.</p>`,
+`<p>Se o Docker disser <b>“WSL needs updating”</b>, abra o <b>Prompt de Comando como administrador</b> (não o PowerShell) e corra:</p>${C('wsl --update --web-download')}${C('wsl --shutdown')}<p>Volte ao Docker e clique em <b>Try Again</b> até aparecer <b>Engine running</b>.</p>`,
+`<p><b>Stripe CLI</b>, no Prompt de Comando:</p>${C('winget install Stripe.StripeCli')}<p>Feche e volte a abrir a janela, depois corra <code>stripe login</code> e autorize no browser.</p>`
+]},
+{t:'Chaves e pacote',time:'10 min',lead:'Os comandos geram as chaves internas e preparam o programa assinado.',a:[
+`<p>Na pasta do projeto, crie o <code>.env</code> e gere as chaves internas (não mostra nada):</p>${C('copy deployment\\platform\\.env.example deployment\\platform\\.env')}${C('node scripts/platform-secrets.mjs deployment/platform/.env --keys-dir deployment/platform/keys')}`,
+`<p>Construa, empacote e assine o programa:</p>${C('npm run cloudflare:build')}${C('npm run cloudflare:package -- 1.0.0')}${C('go -C desktop/launcher run ./cmd/license-tool -mode sign-package -private-key "deployment/platform/keys/signing-key.pem" -package "output/cloudflare/1.0.0"')}`,
+`<p>No <code>.env</code>: <code>PLATFORM_PACKAGE_HOST_PATH=E:/…/output/cloudflare/1.0.0</code> (caminho completo, com barras <code>/</code>) e <code>PLATFORM_HOSTING_APPROVED=true</code>.</p><div class="tip">Faça uma cópia segura do <code>.env</code> e da pasta <code>keys</code>. Sem a chave de assinatura não pode publicar atualizações.</div>`
+]},
+{t:'Arrancar o painel',time:'15 min',lead:'Sem domínio, o endereço público é um túnel temporário.',a:[
+`<p>Ponha <code>PLATFORM_ORIGIN=https://pending.invalid</code> no <code>.env</code> e arranque só o túnel:</p>${C('docker compose --env-file deployment/platform/.env -f deployment/platform/compose.yaml --profile quick up -d quick')}`,
+`<p>Veja o endereço que o túnel deu (acaba em <code>trycloudflare.com</code>):</p>${C('docker compose --env-file deployment/platform/.env -f deployment/platform/compose.yaml logs quick')}<p>Copie-o para <code>PLATFORM_ORIGIN=</code> no <code>.env</code>.</p>`,
+`<p>Arranque o resto:</p>${C('docker compose --env-file deployment/platform/.env -f deployment/platform/compose.yaml up --build -d database service portal')}`,
+`<p>Obtenha o segredo do webhook com a Stripe CLI e cole-o em <code>STRIPE_WEBHOOK_SECRET=</code>:</p>${C('stripe listen --print-secret')}<p>Depois deixe esta janela aberta durante o teste, para os pagamentos chegarem ao painel:</p>${C('stripe listen --forward-to localhost:4100/stripe/webhook --events checkout.session.completed,invoice.paid,invoice.payment_failed,customer.subscription.updated,customer.subscription.deleted')}`,
+`<p>Verifique tudo de uma vez (só lê, não altera nada):</p>${C('go -C desktop/launcher run ./cmd/platform -check -env ../../deployment/platform/.env')}<div class="tip">Os avisos (<b>!</b>) sobre domínio e Gmail são normais neste modo. O que tem de desaparecer são os <b>✘</b>.</div>`,
+`<div class="warn">O endereço do túnel <b>muda</b> sempre que o reiniciar, e o painel só funciona com o PC ligado e o Docker aberto. É só para teste.</div>`
+]},
+{t:'Demonstração e teste',time:'15 min',lead:'A demo é opcional mas recomendada: quem compra pode experimentar com dados fictícios.',a:[
+`<p><b>Instalar a demonstração</b> (uma vez; cria recursos na sua Cloudflare):</p>${C('go -C desktop/launcher run ./cmd/platform -demo-install -env ../../deployment/platform/.env')}<p>No fim escreve os dois endereços no <code>.env</code>. Reinicie o painel e aparece o bloco <b>“Quer ver como funciona primeiro?”</b>.</p>`,
+`<p><b>Teste real:</b> abra o endereço do painel, crie conta com o seu email e <b>confirme o email que chega</b> (veja o spam).</p>`,
+`<p>Preencha o negócio e espere 2 a 3 minutos. Quando acabar, abra a gestão e crie um produto: ele aparece no site do cliente.</p>`,
+`<p><b>Pagamento de teste:</b> clique em <b>Subscrever</b> e use o cartão <code>4242 4242 4242 4242</code>, validade futura e CVC <code>123</code>. O plano passa a <b>Subscrição ativa</b>.</p><div class="warn">Só use este cartão falso. A página tem de dizer “Test mode”.</div>`,
+`<p>Para repetir o teste todo (ciclo de vida, suspensão, remoção), siga <code>docs/TESTE_FINAL.md</code>.</p>`
+]}
+];
+
+const done=JSON.parse(S('done')||'{}');
+let cur=+S('cur')||0;
+const key=(i,j)=>i+'.'+j;
+const stepDone=i=>steps[i].a.every((_,j)=>done[key(i,j)]);
+function menu(){
+  const total=steps.reduce((n,s)=>n+s.a.length,0),got=Object.values(done).filter(Boolean).length;
+  document.getElementById('bar').style.width=(100*got/total)+'%';
+  document.getElementById('menu').innerHTML=steps.map((s,i)=>`<button class="item${i===cur?' on':''}${stepDone(i)?' done':''}" data-i="${i}"><span class="n">${stepDone(i)?'✓':i+1}</span><span>${s.t}</span></button>`).join('');
+}
+function render(){
+  const s=steps[cur];
+  document.getElementById('step').innerHTML=`<h2>${cur+1}. ${s.t}</h2><div class="time">⏱ cerca de ${s.time}</div><p class="lead">${s.lead}</p>
+  <ol class="steps">${s.a.map((h,j)=>`<li class="${done[key(cur,j)]?'done':''}">${h}<label class="chk"><input type="checkbox" data-j="${j}" ${done[key(cur,j)]?'checked':''}> feito</label></li>`).join('')}</ol>
+  <div class="nav2"><button class="btn" id="prev" ${cur?'':'disabled'}>← Anterior</button><button class="btn p" id="next">${cur<steps.length-1?'Seguinte →':'Terminar'}</button></div>`;
+  menu();window.scrollTo(0,0);
+}
+function go(i){cur=Math.max(0,Math.min(steps.length-1,i));S('cur',cur);render()}
+document.addEventListener('click',e=>{
+  const t=e.target;
+  if(t.closest('#menu .item'))return go(+t.closest('.item').dataset.i);
+  if(t.id==='prev')return go(cur-1);
+  if(t.id==='next')return go(cur+1);
+  if(t.classList.contains('cp')){const text=t.parentElement.firstChild.textContent;(navigator.clipboard?navigator.clipboard.writeText(text):Promise.reject()).then(()=>{t.textContent='Copiado ✓';setTimeout(()=>t.textContent='Copiar',1500)}).catch(()=>{const r=document.createRange();r.selectNodeContents(t.parentElement.firstChild);getSelection().removeAllRanges();getSelection().addRange(r);t.textContent='Selecionado: Ctrl+C';});return}
+  if(t.tagName==='IMG'&&t.closest('figure')){const z=document.getElementById('zoom');z.querySelector('img').src=t.src;z.style.display='flex';return}
+  if(t.closest('#zoom')){document.getElementById('zoom').style.display='none'}
+});
+document.addEventListener('change',e=>{
+  if(e.target.matches('input[type=checkbox][data-j]')){done[key(cur,+e.target.dataset.j)]=e.target.checked;S('done',JSON.stringify(done));e.target.closest('li').classList.toggle('done',e.target.checked);menu()}
+});
+render();
+</script>
+</body>
+</html>

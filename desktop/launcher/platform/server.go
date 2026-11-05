@@ -12,6 +12,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"log"
 	"foodtruck.local/desktop/cloudflare"
 	"io"
 	"net/http"
@@ -391,6 +392,8 @@ func (s *Server) RunOne(ctx context.Context, deploy Deploy) error {
 	}()
 	result, e := deploy(ctx, id, clear)
 	if e != nil {
+		// The customer sees a short message; the operator needs the real cause (no secrets: errors carry API messages only).
+		log.Printf("installation %s blocked: %v", id, e)
 		message := "Verifique a configura\u00e7\u00e3o do alojamento. Os recursos existentes foram preservados."
 		var hostingError *cloudflare.HostingError
 		if errors.As(e, &hostingError) {

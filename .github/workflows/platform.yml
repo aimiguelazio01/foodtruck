@@ -43,6 +43,8 @@ jobs:
         run: npm run cloudflare:test
       - name: Shared services on PostgreSQL
         run: npm run test:shared
+      - name: Platform secrets generator
+        run: node --test scripts/platform-secrets.test.mjs
 
   platform:
     name: Go engine and platform service

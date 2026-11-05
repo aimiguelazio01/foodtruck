@@ -60,10 +60,10 @@ async function readInput(request) {
 }
 
 // Mount on the private API Worker. The deployment must disable public routes and previews.
-export async function handleInstallation(request, env) {
+export async function handleInstallation(request, env, trace) {
   const path = new URL(request.url).pathname;
   if (path === '/api/v1/installation/status' && request.method === 'GET') {
-    return json({ configured: await isD1Configured(env.DB), demo: false, readOnly: false });
+    return json({ configured: await isD1Configured(env.DB), demo: env.DEMO_MODE === '1', readOnly: false });
   }
   if (path !== '/api/v1/installation/complete' || request.method !== 'POST') return null;
   if (!await installationAuthorized(request, env)) return json({ message: 'Token de configuração inválido ou expirado.' }, 403);
@@ -79,7 +79,8 @@ export async function handleInstallation(request, env) {
       ...body, email: body.email.toLowerCase(), passwordHash, logo: '', bootstrapID: env.BOOTSTRAP_ID ?? null,
     });
     return json({ ok: true }, 201);
-  } catch {
+  } catch (error) {
+    if (trace) Object.assign(trace, { stage: `installation:${stage}`, cause: error });
     if (await isD1Configured(env.DB)) return conflict();
     return setupError(stage, stage === 'password' ? 'PASSWORD_DERIVATION_FAILED' : 'BUSINESS_INITIALIZATION_FAILED');
   }

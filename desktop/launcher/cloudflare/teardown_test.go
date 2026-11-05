@@ -73,14 +73,51 @@ func (f *fakeAccount) handler(t *testing.T, accountID string) transport {
 			f.deleted = append(f.deleted, "database")
 			return reply(200, nil)
 		case strings.HasSuffix(path, "/lifecycle") && req.Method == http.MethodPut:
+			var body struct {
+				Rules []struct {
+					ID         string `json:"id"`
+					Enabled    bool   `json:"enabled"`
+					Conditions struct {
+						Prefix *string `json:"prefix"`
+					} `json:"conditions"`
+					Delete struct {
+						Condition struct {
+							Type   string `json:"type"`
+							MaxAge int    `json:"maxAge"`
+						} `json:"condition"`
+					} `json:"deleteObjectsTransition"`
+					Abort struct {
+						Condition struct {
+							Type   string `json:"type"`
+							MaxAge int    `json:"maxAge"`
+						} `json:"condition"`
+					} `json:"abortMultipartUploadsTransition"`
+				} `json:"rules"`
+			}
+			decoder := json.NewDecoder(req.Body)
+			decoder.DisallowUnknownFields()
+			if err := decoder.Decode(&body); err != nil {
+				t.Fatalf("lifecycle body: %v", err)
+			}
+			if len(body.Rules) != 1 {
+				t.Fatalf("lifecycle rules: %+v", body.Rules)
+			}
+			rule := body.Rules[0]
+			if rule.ID == "" || !rule.Enabled || rule.Conditions.Prefix == nil || *rule.Conditions.Prefix != "" ||
+				rule.Delete.Condition.Type != "Age" || rule.Delete.Condition.MaxAge != 86400 ||
+				rule.Abort.Condition.Type != "Age" || rule.Abort.Condition.MaxAge != 86400 {
+				t.Fatalf("lifecycle rule does not expire everything: %+v", rule)
+			}
 			f.lifecycle++
-			return reply(200, nil)
+			return reply(200, map[string]any{})
 		case strings.HasPrefix(path, "/r2/buckets/") && req.Method == http.MethodDelete:
 			if !f.bucket {
 				return reply(404, nil)
 			}
-			if f.bucketBusy {
-				return reply(409, nil)
+			if f.bucketBusy { // R2 error 10008 BucketNotEmpty
+				encoded, _ := json.Marshal(map[string]any{"success": false, "result": nil,
+					"errors": []map[string]any{{"code": 10008, "message": "Cannot delete bucket that contains objects."}}})
+				return &http.Response{StatusCode: 409, Body: io.NopCloser(strings.NewReader(string(encoded)))}, nil
 			}
 			f.bucket = false
 			f.deleted = append(f.deleted, "bucket")

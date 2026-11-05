@@ -1,7 +1,7 @@
 import { HttpError } from '../../packages/backend/db/port.js';
 import { json, sha256 } from './http.mjs';
 import { readBoundedJSON } from './installation-worker.mjs';
-import { hashPassword, verifyPassword } from './passwords.mjs';
+import { hashPassword, verifyLoginPassword } from './passwords.mjs';
 import { assertMailAvailable, sendAccountMail } from './mail.mjs';
 import { clientRateIdentity, takeRequestSlot } from './rate-limits.mjs';
 
@@ -98,7 +98,7 @@ async function login(request, env) {
   const password = typeof input.password === 'string' && input.password.length <= 256 ? input.password : '';
   if (!await takeRequestSlot(env.DB, 'customer-login-email', await sha256(email), 5, windowMs)) throw new HttpError('Tente novamente dentro de 15 minutos.', 429);
   const customer = await env.DB.prepare('SELECT id,email,password,verified_at FROM customers WHERE email=?').bind(email).first();
-  if (!await verifyPassword(password, customer?.password) || !customer) throw new HttpError('Credenciais inválidas.', 401);
+  if (!await verifyLoginPassword(password, customer?.password, 'customer') || !customer) throw new HttpError('Credenciais inválidas.', 401);
   if (!customer.verified_at) throw new HttpError('Confirme primeiro o seu email.', 403);
   const token = newToken();
   await env.DB.prepare('INSERT INTO customer_sessions(hash,customer_id,expires) VALUES (?,?,?)')

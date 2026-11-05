@@ -23,7 +23,13 @@ export default function Portal() {
   const [slug, setSlug] = useState('');
   const [slugState, setSlugState] = useState<SlugState>({ state: 'idle', domain: '' });
   const [qr, setQr] = useState('');
+  const [demo, setDemo] = useState<{ customer?: string; management?: string }>({});
   const started = useRef(false);
+
+  // The shared demonstration site, when the operator has installed one.
+  useEffect(() => {
+    fetch('/api/demo', { cache: 'no-store' }).then(r => (r.ok ? r.json() : {})).then(setDemo).catch(() => {});
+  }, []);
 
   const say = (text: string, bad = false) => {
     setMessage(text);
@@ -268,6 +274,17 @@ export default function Portal() {
               if (!target) throw new Error('Destino de pagamento inválido.');
               window.location.assign(target);
             })}>Gerir pagamento</button>}
+          </section>
+        )}
+
+        {demo.management && stage !== 'progress' && stage !== 'loading' && !sentTo && (
+          <section className="demo-offer" aria-label="Demonstração">
+            <h2>Quer ver como funciona primeiro?</h2>
+            <p>Experimente uma demonstração com dados fictícios. Não precisa de conta. Não tem pagamentos nem emails reais, e os dados repõem-se todos os dias.</p>
+            <div className="links">
+              <a href={`${demo.management}/demo`} target="_blank" rel="noreferrer">Experimentar a gestão ↗</a>
+              {demo.customer && <a href={demo.customer} target="_blank" rel="noreferrer">Ver a página de encomendas ↗</a>}
+            </div>
           </section>
         )}
 

@@ -1,7 +1,8 @@
 import { backupMedia } from './backup-media.mjs';
 import { hostingAccess } from './subscription.mjs';
 import { handleInstallation, readBoundedJSON } from './installation-worker.mjs';
-import { verifyPassword } from './passwords.mjs';
+import { verifyLoginPassword } from './passwords.mjs';
+import { logFailure, newRequestId } from './diagnostics.mjs';
 import { readOrganizations, readPublicRoute } from './read-routes.mjs';
 import { readPublicMenu } from './menu.mjs';
 import { checkoutRoute } from './checkout-route.mjs';
@@ -15,6 +16,8 @@ import { clientRateIdentity, takeRequestSlot } from './rate-limits.mjs';
 import { json, sessionToken, sessionUser, sha256 as hash } from './http.mjs';
 import { handleSharedRoute } from './shared-routes.mjs';
 import { handleAccountRoute } from './account-routes.mjs';
+import { demoBlock, demoSession, isDemo } from './demo-mode.mjs';
+import { demoSeedRoute, resetDemoIfDue } from './demo-reset.mjs';
 import { HttpError } from '../../packages/backend/db/port.js';
 
 const rateWindow = 900_000;
@@ -39,7 +42,7 @@ async function login(request, env) {
     WHERE reset<=? OR count<5 RETURNING reset`).bind(email, now + 900_000, now, now, now).first();
   if (!attempt) return json({ message: 'Tente novamente dentro de 15 minutos.' }, 429);
   const user = await db.prepare('SELECT id,email,password FROM users WHERE email=?').bind(email).first();
-  if (!await verifyPassword(body.password, user?.password) || !user) {
+  if (!await verifyLoginPassword(body.password, user?.password, 'staff') || !user) {
     return json({ message: 'Credenciais inválidas.' }, 401);
   }
   const token = hex(crypto.getRandomValues(new Uint8Array(32)));
@@ -59,132 +62,169 @@ async function logout(request, env) {
 export default {
   async scheduled(event, env) {
     if (await hostingAccess(env)) return;
+    if (isDemo(env)) {
+      try {
+        await resetDemoIfDue(env, event.scheduledTime);
+      } catch (error) {
+        logFailure({ request: new Request('https://demo.invalid/scheduled'), stage: 'demo-reset', error, status: 500, requestId: newRequestId() });
+      }
+      return;
+    }
     await runMaintenance(env.DB, event.scheduledTime);
   },
   async fetch(request, env) {
+    const trace = { stage: 'start' };
+    const requestId = newRequestId();
     try {
-      const mediaBackup = await backupMedia(request,env);
-      if(mediaBackup)return mediaBackup;
-      const hosting = await hostingAccess(env);
-      if (hosting) return hosting;
-      const path = new URL(request.url).pathname;
-      const shared = await handleSharedRoute(request, env);
-      if (shared) return shared;
-      const media = mediaPath.exec(path);
-      if (media && (request.method === 'GET' || request.method === 'HEAD')) return await readMedia(env, media[1], request.method === 'HEAD');
-      const logo = /^\/api\/v1\/network\/([a-zA-Z0-9-]{1,100})\/company\/images$/.exec(path);
-      const businessImage = /^\/api\/v1\/manage\/businesses\/([a-zA-Z0-9-]{1,100})\/images$/.exec(path);
-      if ((logo || businessImage) && request.method === 'POST') {
-        if (!env.MANAGEMENT_ORIGIN || request.headers.get('origin') !== env.MANAGEMENT_ORIGIN) return json({ message: 'Origem do pedido inválida.' }, 403);
-        const user = await sessionUser(request, env.DB);
-        if (!user) return json({ message: 'Autenticação necessária.' }, 401);
-        let allowed;
-        if (logo) {
-          allowed = await canManageCompany(env.DB, logo[1], user.id);
-        } else {
-          const rights = await businessRights(env.DB, user.id, businessImage[1]);
-          allowed = rights && !rights.archived && (rights.isAdmin ||
-            ((rights.permissions.menus || rights.permissions.branding) && (rights.custom || rights.role !== 'staff')));
-        }
-        if (!allowed) return json({ message: 'Não tem permissão para esta operação.' }, 403);
-        if (!await takeRequestSlot(env.DB, 'upload', user.id, 30, rateWindow)) return throttled();
-        const result = await saveImage(request, env);
-        return json(result.body, result.status);
-      }
-      const company = /^\/api\/v1\/network\/([a-zA-Z0-9-]{1,100})\/(company|branding)$/.exec(path);
-      if (company && (request.method === 'POST' || (request.method === 'GET' && company[2] === 'company'))) {
-        if (request.method === 'POST' && (!env.MANAGEMENT_ORIGIN || request.headers.get('origin') !== env.MANAGEMENT_ORIGIN)) {
-          return json({ message: 'Origem do pedido inválida.' }, 403);
-        }
-        const user = await sessionUser(request, env.DB);
-        if (!user) return json({ message: 'Autenticação necessária.' }, 401);
-        const result = await manageCompanySettings(env.DB, request, company[1], user.id, company[2]);
-        return json(result.body, result.status);
-      }
-      const checkout = /^\/api\/v1\/public\/businesses\/([a-z0-9-]{1,80})\/orders$/.exec(path);
-      if (request.method === 'POST' && checkout) {
-        if (!await takeRequestSlot(env.DB, 'checkout', await clientRateIdentity(request), 30, rateWindow)) return throttled();
-        return await checkoutRoute(request, env.DB, checkout[1]);
-      }
-      const mutation = /^\/api\/v1\/manage\/businesses\/([a-zA-Z0-9-]{1,100})\/orders\/([0-9a-f-]{36})\/(status|payment)$/.exec(path);
-      if (mutation && request.method === (mutation[3] === 'payment' ? 'POST' : 'PATCH')) {
-        if (!env.MANAGEMENT_ORIGIN || request.headers.get('origin') !== env.MANAGEMENT_ORIGIN) {
-          return json({ message: 'Origem do pedido inválida.' }, 403);
-        }
-        const user = await sessionUser(request, env.DB);
-        if (!user) return json({ message: 'Autenticação necessária.' }, 401);
-        if (!await orderAccess(env.DB, user.id, mutation[1])) return json({ message: 'Não tem permissão para esta operação.' }, 403);
-        const input = await readBoundedJSON(request);
-        if (!input) return json({ message: 'Pedido inválido.' }, 400);
-        const result = await changeManagedOrder(env.DB, mutation[1], mutation[2], user.id, mutation[3], input);
-        return result.status === 200 ? json({ ok: true }) : json({ message: result.message }, result.status);
-      }
-      if (request.method === 'GET') {
-        const resource = /^\/api\/v1\/manage\/businesses\/([a-zA-Z0-9-]{1,100})\/(products|settings)$/.exec(path);
-        if (resource || path === '/api/v1/manage/businesses' || path === '/api/v1/manage/customer-app') {
-          const user = await sessionUser(request, env.DB);
-          if (!user) return json({ message: 'Autenticação necessária.' }, 401);
-          if (resource) {
-            const result = await readManagedResource(env.DB, user.id, resource[1], resource[2]);
-            return result ? json(result) : json({ message: 'Não tem permissão para esta operação.' }, 403);
-          }
-          if (path.endsWith('/customer-app')) {
-            if (!env.CUSTOMER_ORIGIN) return json({ message: 'Página de encomendas por configurar.' }, 503);
-            return new Response(null, { status: 302, headers: { Location: new URL('/', env.CUSTOMER_ORIGIN).href, 'Cache-Control': 'no-store' } });
-          }
-          return json({ businesses: await readManagedBusinesses(env.DB, user.id) });
-        }
-        const tracking = /^\/api\/v1\/customer\/orders\/([0-9a-f-]{36})$/.exec(path);
-        if (tracking) {
-          const token = trackingToken(request, tracking[1]);
-          const order = token && await readTrackedOrder(env.DB, tracking[1], await hash(token));
-          return order ? json({ order }) : json({ error: 'Not found' }, 404);
-        }
-        const managed = /^\/api\/v1\/manage\/businesses\/([a-zA-Z0-9-]{1,100})\/orders(?:\/([0-9a-f-]{36})\/history)?$/.exec(path);
-        if (managed) {
-          const user = await sessionUser(request, env.DB);
-          if (!user) return json({ message: 'Autenticação necessária.' }, 401);
-          const role = await orderAccess(env.DB, user.id, managed[1]);
-          if (!role) return json({ message: 'Não tem permissão para esta operação.' }, 403);
-          if (managed[2]) {
-            const history = await readOrderHistory(env.DB, managed[1], managed[2]);
-            return history ? json({ history }) : json({ message: 'Encomenda não encontrada.' }, 404);
-          }
-          return json({ orders: await readManagedOrders(env.DB, managed[1], role) });
-        }
-        const publicData = await readPublicRoute(env.DB, path);
-        if (publicData) return json(publicData);
-        const menu = /^\/api\/v1\/public\/businesses\/([a-z0-9-]{1,80})$/.exec(path);
-        if (menu) {
-          const data = await readPublicMenu(env.DB, menu[1]);
-          if (!data) return json({ error: 'Not found' }, 404);
-          const { catalogRevision, ...publicMenu } = data;
-          return json(publicMenu);
-        }
-        if (['/api/v1/auth/me', '/api/v1/manage/organizations', '/api/v1/network/me/organizations'].includes(path)) {
-          const user = await sessionUser(request, env.DB);
-          if (!user) return json({ message: 'Autenticação necessária.' }, 401);
-          if (path === '/api/v1/auth/me') return json({ user });
-          return json({ organizations: await readOrganizations(env.DB, user.id, path.includes('/network/')) });
-        }
-      }
-      if (request.method === 'POST' && ['/api/v1/auth/login', '/api/v1/auth/logout'].includes(path)) {
-        if (!env.MANAGEMENT_ORIGIN || request.headers.get('origin') !== env.MANAGEMENT_ORIGIN) {
-          return json({ message: 'Origem do pedido inválida.' }, 403);
-        }
-        if (path.endsWith('/logout')) return await logout(request, env);
-        if (!await takeRequestSlot(env.DB, 'staff-login', await clientRateIdentity(request), 25, rateWindow)) return throttled();
-        return await login(request, env);
-      }
-      const account = await handleAccountRoute(request, env);
-      if (account) return account;
-      return await handleInstallation(request, env) ?? json({ message: 'Página não encontrada.' }, 404);
+      const response = await route(request, env, trace);
+      // Handled 503s (hosting check, media, setup) are logged too, with the swallowed cause when the handler kept one.
+      if (response.status === 503) logFailure({ request, stage: trace.stage, error: trace.cause, status: 503, requestId });
+      return response;
     } catch (error) {
-      if (error instanceof HttpError) return json({ message: error.message }, error.statusCode);
-      // Log only the route and error class/message under a short id; never request bodies, cookies or tokens.
-      const errorId = crypto.randomUUID().slice(0, 8);
-      console.error(`api-error ${errorId} ${request.method} ${new URL(request.url).pathname} ${error?.name ?? 'Error'}: ${String(error?.message ?? error).slice(0, 200)}`);
-      return json({ message: 'Serviço temporariamente indisponível.', errorId }, 503);
+      if (error instanceof HttpError) {
+        if (error.statusCode >= 500) logFailure({ request, stage: trace.stage, error, status: error.statusCode, requestId });
+        return json({ message: error.message }, error.statusCode);
+      }
+      // Route pattern, stage and error class/message only; never bodies, cookies, tokens or query strings.
+      logFailure({ request, stage: trace.stage, error, status: 503, requestId });
+      return json({ message: 'Serviço temporariamente indisponível.', errorId: requestId }, 503);
     }
   },
 };
+
+async function route(request, env, trace) {
+  trace.stage = 'media-backup';
+  const mediaBackup = await backupMedia(request,env);
+  if(mediaBackup)return mediaBackup;
+  trace.stage = 'hosting-gate';
+  const hosting = await hostingAccess(env, Date.now(), trace);
+  if (hosting) return hosting;
+  const path = new URL(request.url).pathname;
+  trace.stage = 'demo';
+  const demoDenied = demoBlock(request, env);
+  if (demoDenied) return demoDenied;
+  if (request.method === 'POST' && path === '/api/v1/demo/session') {
+    const started = await demoSession(request, env);
+    if (started) return started;
+  }
+  if (request.method === 'PUT' && path === '/api/v1/demo/seed') {
+    const seeded = await demoSeedRoute(request, env);
+    if (seeded) return seeded;
+  }
+  trace.stage = 'backend';
+  const shared = await handleSharedRoute(request, env);
+  if (shared) return shared;
+  trace.stage = 'worker-route';
+  const media = mediaPath.exec(path);
+  if (media && (request.method === 'GET' || request.method === 'HEAD')) return await readMedia(env, media[1], request.method === 'HEAD');
+  const logo = /^\/api\/v1\/network\/([a-zA-Z0-9-]{1,100})\/company\/images$/.exec(path);
+  const businessImage = /^\/api\/v1\/manage\/businesses\/([a-zA-Z0-9-]{1,100})\/images$/.exec(path);
+  if ((logo || businessImage) && request.method === 'POST') {
+    if (!env.MANAGEMENT_ORIGIN || request.headers.get('origin') !== env.MANAGEMENT_ORIGIN) return json({ message: 'Origem do pedido inválida.' }, 403);
+    const user = await sessionUser(request, env.DB);
+    if (!user) return json({ message: 'Autenticação necessária.' }, 401);
+    let allowed;
+    if (logo) {
+      allowed = await canManageCompany(env.DB, logo[1], user.id);
+    } else {
+      const rights = await businessRights(env.DB, user.id, businessImage[1]);
+      allowed = rights && !rights.archived && (rights.isAdmin ||
+        ((rights.permissions.menus || rights.permissions.branding) && (rights.custom || rights.role !== 'staff')));
+    }
+    if (!allowed) return json({ message: 'Não tem permissão para esta operação.' }, 403);
+    if (!await takeRequestSlot(env.DB, 'upload', user.id, 30, rateWindow)) return throttled();
+    const result = await saveImage(request, env);
+    return json(result.body, result.status);
+  }
+  const company = /^\/api\/v1\/network\/([a-zA-Z0-9-]{1,100})\/(company|branding)$/.exec(path);
+  if (company && (request.method === 'POST' || (request.method === 'GET' && company[2] === 'company'))) {
+    if (request.method === 'POST' && (!env.MANAGEMENT_ORIGIN || request.headers.get('origin') !== env.MANAGEMENT_ORIGIN)) {
+      return json({ message: 'Origem do pedido inválida.' }, 403);
+    }
+    const user = await sessionUser(request, env.DB);
+    if (!user) return json({ message: 'Autenticação necessária.' }, 401);
+    const result = await manageCompanySettings(env.DB, request, company[1], user.id, company[2]);
+    return json(result.body, result.status);
+  }
+  const checkout = /^\/api\/v1\/public\/businesses\/([a-z0-9-]{1,80})\/orders$/.exec(path);
+  if (request.method === 'POST' && checkout) {
+    if (!await takeRequestSlot(env.DB, 'checkout', await clientRateIdentity(request), 30, rateWindow)) return throttled();
+    return await checkoutRoute(request, env.DB, checkout[1]);
+  }
+  const mutation = /^\/api\/v1\/manage\/businesses\/([a-zA-Z0-9-]{1,100})\/orders\/([0-9a-f-]{36})\/(status|payment)$/.exec(path);
+  if (mutation && request.method === (mutation[3] === 'payment' ? 'POST' : 'PATCH')) {
+    if (!env.MANAGEMENT_ORIGIN || request.headers.get('origin') !== env.MANAGEMENT_ORIGIN) {
+      return json({ message: 'Origem do pedido inválida.' }, 403);
+    }
+    const user = await sessionUser(request, env.DB);
+    if (!user) return json({ message: 'Autenticação necessária.' }, 401);
+    if (!await orderAccess(env.DB, user.id, mutation[1])) return json({ message: 'Não tem permissão para esta operação.' }, 403);
+    const input = await readBoundedJSON(request);
+    if (!input) return json({ message: 'Pedido inválido.' }, 400);
+    const result = await changeManagedOrder(env.DB, mutation[1], mutation[2], user.id, mutation[3], input);
+    return result.status === 200 ? json({ ok: true }) : json({ message: result.message }, result.status);
+  }
+  if (request.method === 'GET') {
+    const resource = /^\/api\/v1\/manage\/businesses\/([a-zA-Z0-9-]{1,100})\/(products|settings)$/.exec(path);
+    if (resource || path === '/api/v1/manage/businesses' || path === '/api/v1/manage/customer-app') {
+      const user = await sessionUser(request, env.DB);
+      if (!user) return json({ message: 'Autenticação necessária.' }, 401);
+      if (resource) {
+        const result = await readManagedResource(env.DB, user.id, resource[1], resource[2]);
+        return result ? json(result) : json({ message: 'Não tem permissão para esta operação.' }, 403);
+      }
+      if (path.endsWith('/customer-app')) {
+        if (!env.CUSTOMER_ORIGIN) return json({ message: 'Página de encomendas por configurar.' }, 503);
+        return new Response(null, { status: 302, headers: { Location: new URL('/', env.CUSTOMER_ORIGIN).href, 'Cache-Control': 'no-store' } });
+      }
+      return json({ businesses: await readManagedBusinesses(env.DB, user.id) });
+    }
+    const tracking = /^\/api\/v1\/customer\/orders\/([0-9a-f-]{36})$/.exec(path);
+    if (tracking) {
+      const token = trackingToken(request, tracking[1]);
+      const order = token && await readTrackedOrder(env.DB, tracking[1], await hash(token));
+      return order ? json({ order }) : json({ error: 'Not found' }, 404);
+    }
+    const managed = /^\/api\/v1\/manage\/businesses\/([a-zA-Z0-9-]{1,100})\/orders(?:\/([0-9a-f-]{36})\/history)?$/.exec(path);
+    if (managed) {
+      const user = await sessionUser(request, env.DB);
+      if (!user) return json({ message: 'Autenticação necessária.' }, 401);
+      const role = await orderAccess(env.DB, user.id, managed[1]);
+      if (!role) return json({ message: 'Não tem permissão para esta operação.' }, 403);
+      if (managed[2]) {
+        const history = await readOrderHistory(env.DB, managed[1], managed[2]);
+        return history ? json({ history }) : json({ message: 'Encomenda não encontrada.' }, 404);
+      }
+      return json({ orders: await readManagedOrders(env.DB, managed[1], role) });
+    }
+    const publicData = await readPublicRoute(env.DB, path);
+    if (publicData) return json(publicData);
+    const menu = /^\/api\/v1\/public\/businesses\/([a-z0-9-]{1,80})$/.exec(path);
+    if (menu) {
+      const data = await readPublicMenu(env.DB, menu[1]);
+      if (!data) return json({ error: 'Not found' }, 404);
+      const { catalogRevision, ...publicMenu } = data;
+      return json(publicMenu);
+    }
+    if (['/api/v1/auth/me', '/api/v1/manage/organizations', '/api/v1/network/me/organizations'].includes(path)) {
+      const user = await sessionUser(request, env.DB);
+      if (!user) return json({ message: 'Autenticação necessária.' }, 401);
+      if (path === '/api/v1/auth/me') return json({ user });
+      return json({ organizations: await readOrganizations(env.DB, user.id, path.includes('/network/')) });
+    }
+  }
+  if (request.method === 'POST' && ['/api/v1/auth/login', '/api/v1/auth/logout'].includes(path)) {
+    trace.stage = 'staff-auth';
+    if (!env.MANAGEMENT_ORIGIN || request.headers.get('origin') !== env.MANAGEMENT_ORIGIN) {
+      return json({ message: 'Origem do pedido inválida.' }, 403);
+    }
+    if (path.endsWith('/logout')) return await logout(request, env);
+    if (!await takeRequestSlot(env.DB, 'staff-login', await clientRateIdentity(request), 25, rateWindow)) return throttled();
+    return await login(request, env);
+  }
+  trace.stage = 'account-route';
+  const account = await handleAccountRoute(request, env);
+  if (account) return account;
+  trace.stage = 'installation';
+  return await handleInstallation(request, env, trace) ?? json({ message: 'Página não encontrada.' }, 404);
+}

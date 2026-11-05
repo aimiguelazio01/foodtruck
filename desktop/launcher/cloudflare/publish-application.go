@@ -23,6 +23,9 @@ type ApplicationPublishOptions struct {
 	SiteDomain              *SiteDomain
 	AllowIntegrationPreview bool
 	ImagesApproved          bool
+	// Demo publishes the shared demonstration site: DEMO_MODE=1, a token for loading its data, and no hosting gate.
+	Demo      bool
+	DemoToken string
 }
 
 // PublishApplicationFromJournal is the post-bootstrap deployment stage.
@@ -102,7 +105,13 @@ func (c *Client) publishVerifiedApplication(ctx context.Context, directory, pack
 				if options.BackupToken != "" {
 					bindings = append(bindings, map[string]string{"name": "BACKUP_TOKEN", "type": "secret_text", "text": options.BackupToken})
 				}
-				if options.SubscriptionURL != "" {
+				if options.Demo {
+					if len(options.DemoToken) < 32 {
+						return state, errors.New("The demonstration needs a token of at least 32 characters")
+					}
+					bindings = append(bindings, map[string]string{"name": "DEMO_MODE", "type": "plain_text", "text": "1"},
+						map[string]string{"name": "DEMO_TOKEN", "type": "secret_text", "text": options.DemoToken})
+				} else if options.SubscriptionURL != "" {
 					bindings = append(bindings, map[string]string{"name": "SUBSCRIPTION_STATUS_URL", "type": "plain_text", "text": options.SubscriptionURL}, map[string]string{"name": "SUBSCRIPTION_TOKEN", "type": "secret_text", "text": options.SubscriptionToken})
 				}
 				if options.MailAPIKey != "" && options.MailFrom != "" {
@@ -157,9 +166,11 @@ func (c *Client) publishVerifiedApplication(ctx context.Context, directory, pack
 				return state, e
 			}
 		}
-		verify := func() error { return c.verifyApplication(ctx, candidate) }
+		verify := func() error { return c.verifyApplicationAs(ctx, candidate, ".workers.dev", options.Demo) }
 		if options.SiteDomain != nil {
-			verify = func() error { return c.verifyApplicationAt(ctx, candidate, "."+options.SiteDomain.Domain) }
+			verify = func() error {
+				return c.verifyApplicationAs(ctx, candidate, "."+options.SiteDomain.Domain, options.Demo)
+			}
 		}
 		if err := verifyWithRetry(ctx, options.SiteDomain != nil, verify); err != nil {
 			return state, err

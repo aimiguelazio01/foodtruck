@@ -15,7 +15,7 @@ test('own-account deployments do not depend on the platform',async()=>{
  assert.equal(await hostingAccess({}),null);
 });
 test('managed hosting enforces active, expired and unavailable states',async()=>{
- await withFetch(async(url,options)=>{assert.equal(String(url),env.SUBSCRIPTION_STATUS_URL);assert.equal(options.headers.Authorization,'Bearer private-token');assert.equal(options.redirect,'error');return Response.json({active:true})},async()=>{
+ await withFetch(async(url,options)=>{assert.equal(String(url),env.SUBSCRIPTION_STATUS_URL);assert.equal(options.headers.Authorization,'Bearer private-token');assert.equal(options.redirect,'manual');return Response.json({active:true})},async()=>{
   assert.equal(await hostingAccess(env,0),null);
  });
  await withFetch(async()=>Response.json({active:false}),async()=>assert.equal((await hostingAccess(env,0)).status,402));

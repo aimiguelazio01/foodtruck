@@ -12,7 +12,7 @@ import (
 )
 
 func (c *Client) verifyApplication(ctx context.Context, addresses ApplicationAddresses) error {
-	return c.verifyApplicationAt(ctx, addresses, ".workers.dev")
+	return c.verifyApplicationAs(ctx, addresses, ".workers.dev", false)
 }
 
 // verifyWithRetry waits for a freshly attached hostname to start answering over HTTPS.
@@ -38,6 +38,12 @@ func verifyWithRetry(ctx context.Context, wait bool, verify func() error) error 
 }
 
 func (c *Client) verifyApplicationAt(ctx context.Context, addresses ApplicationAddresses, suffix string) error {
+	return c.verifyApplicationAs(ctx, addresses, suffix, false)
+}
+
+// verifyApplicationAs checks that the status endpoint says the site is configured and writable, in demonstration
+// mode if and only if a demonstration was installed.
+func (c *Client) verifyApplicationAs(ctx context.Context, addresses ApplicationAddresses, suffix string, demo bool) error {
 	for _, address := range []string{addresses.Customer, addresses.Management} {
 		origin, err := url.Parse(address)
 		if err != nil || origin.Scheme != "https" || origin.User != nil || origin.Path != "" || origin.RawQuery != "" ||
@@ -60,7 +66,7 @@ func (c *Client) verifyApplicationAt(ctx context.Context, addresses ApplicationA
 		decodeErr := json.NewDecoder(io.LimitReader(response.Body, 8192)).Decode(&status)
 		response.Body.Close()
 		if response.StatusCode != 200 || decodeErr != nil || status.Configured == nil || !*status.Configured ||
-			status.Demo == nil || *status.Demo || status.ReadOnly == nil || *status.ReadOnly {
+			status.Demo == nil || *status.Demo != demo || status.ReadOnly == nil || *status.ReadOnly {
 			return errors.New("Application installation status could not be verified")
 		}
 		request, err = http.NewRequestWithContext(ctx, http.MethodGet, address+"/", nil)

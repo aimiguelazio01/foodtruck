@@ -34,6 +34,8 @@ export function assertMailAvailable(env) {
 }
 
 export async function sendAccountMail(env, email, url, kind) {
+  // The demonstration never sends email, whatever route asked for it.
+  if (env.DEMO_MODE === '1') throw new HttpError('Demonstração: o envio de emails está desativado.', 403);
   assertMailAvailable(env);
   const message = content[kind];
   if (!message) throw new Error('Unknown email kind');
@@ -43,7 +45,7 @@ export async function sendAccountMail(env, email, url, kind) {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ sender: sender(env), to: [{ email }], subject: message.subject, textContent: message.text(url) }),
-      redirect: 'error',
+      redirect: 'manual', // Workers reject 'error'; a 3xx answer is not ok and fails below
       signal: AbortSignal.timeout(10_000),
     });
   } catch {

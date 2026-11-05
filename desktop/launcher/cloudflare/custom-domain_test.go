@@ -47,16 +47,27 @@ func TestAttachSiteDomainsBindsBothHostsAndNeverTakesOverAnotherCustomersAddress
 			}
 			return respond([]workerDomain{})
 		}
-		var body map[string]string
-		if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		if req.Method != http.MethodPut {
+			t.Fatalf("unexpected method %s", req.Method)
+		}
+		var body struct {
+			Hostname string `json:"hostname"`
+			Service  string `json:"service"`
+			Zone     string `json:"zone_id"`
+			Enabled  bool   `json:"enabled"`
+		}
+		decoder := json.NewDecoder(req.Body)
+		decoder.DisallowUnknownFields() // documented inputs only; "environment" was removed
+		if err := decoder.Decode(&body); err != nil {
 			t.Fatal(err)
 		}
-		if body["zone_id"] != domain.Zone || body["environment"] != "production" {
+		if body.Zone != domain.Zone || !body.Enabled || body.Hostname == "" || body.Service == "" {
 			t.Fatalf("unexpected binding %+v", body)
 		}
 		puts++
-		bound[body["hostname"]] = body["service"]
-		return respond(workerDomain{ID: "d", Hostname: body["hostname"], Service: body["service"]})
+		bound[body.Hostname] = body.Service
+		return respond(map[string]any{"id": "d", "hostname": body.Hostname, "service": body.Service, "zone_id": body.Zone,
+			"zone_name": "example.pt", "enabled": true, "previews_enabled": false, "cert_id": "c"})
 	})
 	saved := 0
 	save := func(ProvisionState) error { saved++; return nil }

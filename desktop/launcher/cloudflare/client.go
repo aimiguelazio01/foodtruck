@@ -31,6 +31,13 @@ func New(token string) *Client {
 	}}
 }
 
+// NewWithTransport is New with a custom transport, for tests and the platform preflight check.
+func NewWithTransport(token string, transport http.RoundTripper) *Client {
+	client := New(token)
+	client.http.Transport = transport
+	return client
+}
+
 type APIError struct {
 	Status int
 	Code   int

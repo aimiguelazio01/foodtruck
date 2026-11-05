@@ -38,7 +38,7 @@ async function saveStored(env, entry) {
   }
 }
 
-export async function hostingAccess(env, now = Date.now()) {
+export async function hostingAccess(env, now = Date.now(), trace) {
   if (!env.SUBSCRIPTION_STATUS_URL) return null;
   const key = `${env.SUBSCRIPTION_STATUS_URL}\n${env.SUBSCRIPTION_TOKEN}`;
   let known = cache.get(key);
@@ -55,7 +55,7 @@ export async function hostingAccess(env, now = Date.now()) {
   try {
     const url = new URL(env.SUBSCRIPTION_STATUS_URL);
     if (url.protocol !== 'https:' || !env.SUBSCRIPTION_TOKEN) throw new Error('Invalid hosting configuration');
-    const response = await fetch(url, { headers: { Authorization: `Bearer ${env.SUBSCRIPTION_TOKEN}` }, redirect: 'error', signal: AbortSignal.timeout(5000) });
+    const response = await fetch(url, { headers: { Authorization: `Bearer ${env.SUBSCRIPTION_TOKEN}` }, redirect: 'manual', signal: AbortSignal.timeout(5000) });
     if (!response.ok) throw new Error('Hosting status unavailable');
     const state = await response.json();
     if (state.active !== true && state.active !== false) throw new Error('Invalid hosting status');
@@ -63,9 +63,10 @@ export async function hostingAccess(env, now = Date.now()) {
     cache.set(key, entry);
     await saveStored(env, entry);
     return state.active ? null : suspended();
-  } catch {
+  } catch (error) {
     // Portal unreachable: keep serving a site that was recently confirmed active.
     if (known?.active && known.lastActiveAt !== undefined && now - known.lastActiveAt < GRACE_MS) return null;
+    if (trace) trace.cause = error;
     return unavailable();
   }
 }

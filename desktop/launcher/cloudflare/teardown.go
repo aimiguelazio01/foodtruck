@@ -163,7 +163,9 @@ func (c *Client) removeDatabase(ctx context.Context, state ProvisionState) error
 }
 
 // removeBucket expires every object (a bucket must be empty to be deleted) and then deletes it.
-// The REST API has no bulk object delete, so a lifecycle rule empties the bucket within a day.
+// The REST API has no bulk object delete, so a lifecycle rule empties the bucket, typically within
+// a day of the rule applying. The PUT replaces every rule, including R2's default 7-day multipart
+// abort, so the rule also aborts unfinished uploads: DELETE fails while any remain.
 func (c *Client) removeBucket(ctx context.Context, state ProvisionState) error {
 	if state.BucketName == "" {
 		return nil
@@ -174,7 +176,8 @@ func (c *Client) removeBucket(ctx context.Context, state ProvisionState) error {
 	base := "/accounts/" + state.Account + "/r2/buckets/" + url.PathEscape(state.BucketName)
 	rule := map[string]any{"rules": []map[string]any{{
 		"id": "expire-everything", "enabled": true, "conditions": map[string]string{"prefix": ""},
-		"deleteObjectsTransition": map[string]any{"condition": map[string]any{"type": "Age", "maxAge": mediaExpirySecond}},
+		"deleteObjectsTransition":         map[string]any{"condition": map[string]any{"type": "Age", "maxAge": mediaExpirySecond}},
+		"abortMultipartUploadsTransition": map[string]any{"condition": map[string]any{"type": "Age", "maxAge": mediaExpirySecond}},
 	}}}
 	if _, err := c.request(ctx, http.MethodPut, base+"/lifecycle", rule, nil); err != nil {
 		if isStatus(err, 404) {
@@ -186,7 +189,7 @@ func (c *Client) removeBucket(ctx context.Context, state ProvisionState) error {
 		if isStatus(err, 404) {
 			return nil
 		}
-		if isStatus(err, 409) {
+		if isStatus(err, 409) { // 10008 BucketNotEmpty
 			return ErrStoragePending
 		}
 		return err
