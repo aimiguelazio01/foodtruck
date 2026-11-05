@@ -19,8 +19,11 @@ type ProvisionState struct {
 	Workers            map[string]string   `json:"workers,omitempty"`
 	WorkerDigests      map[string]string   `json:"workerDigests,omitempty"`
 	BootstrapCompleted bool                `json:"bootstrapCompleted,omitempty"`
+	BootstrapExpires   string              `json:"bootstrapExpires,omitempty"`
 	CleanupPending     string              `json:"cleanupPending,omitempty"`
 	TemporaryDeleted   map[string]bool     `json:"temporaryDeleted,omitempty"`
+	Domains            []string            `json:"domains,omitempty"`
+	Teardown           string              `json:"teardown,omitempty"`
 }
 
 func NewProvisionState(account string) (ProvisionState, error) {

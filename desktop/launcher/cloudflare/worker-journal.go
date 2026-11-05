@@ -84,15 +84,6 @@ func (c *Client) PublishNewWorker(ctx context.Context, state ProvisionState, rol
 	if err != nil {
 		return state, err
 	}
-	if tag := state.Workers[role]; tag != "" {
-		if state.WorkerDigests[role] != digest {
-			return state, errors.New("Worker package changed. Use the upgrade workflow")
-		}
-		if exists && slices.Contains(tags, tag) {
-			return state, nil
-		}
-		return state, errors.New("Recorded Worker is missing or no longer belongs to this installation")
-	}
 	finish := func(tag string) (ProvisionState, error) {
 		next := state
 		next.Workers = make(map[string]string, len(state.Workers)+1)
@@ -110,6 +101,36 @@ func (c *Client) PublishNewWorker(ctx context.Context, state ProvisionState, rol
 			return state, err
 		}
 		return next, nil
+	}
+	if tag := state.Workers[role]; tag != "" {
+		if !exists || !slices.Contains(tags, tag) {
+			return state, errors.New("Recorded Worker is missing or no longer belongs to this installation")
+		}
+		if state.WorkerDigests[role] == digest && state.WorkerPending == nil {
+			return state, nil
+		}
+		if (role != "bootstrap" && role != "bridge") || state.BootstrapCompleted {
+			return state, errors.New("Worker package changed. Use the upgrade workflow")
+		}
+		if pending := state.WorkerPending; pending != nil && (pending.Role != role || pending.Tag != tag || pending.Digest != digest) {
+			return state, errors.New("Pending temporary Worker update requires the same package")
+		}
+		config["tags"], _ = json.Marshal([]string{tag})
+		encoded, err := json.Marshal(config)
+		if err != nil {
+			return state, err
+		}
+		next := state
+		next.WorkerPending = &WorkerUploadIntent{Role: role, Tag: tag, Digest: digest}
+		if err := save(next); err != nil {
+			return state, err
+		}
+		state = next
+		// Re-uploading the same owned temporary Worker is safe after a lost acknowledgement.
+		if err := c.UploadWorker(ctx, state.Account, name, encoded, modules); err != nil {
+			return state, err
+		}
+		return finish(tag)
 	}
 	if pending := state.WorkerPending; pending != nil {
 		if pending.Role == role && pending.Digest == digest && pending.Tag != "" && exists && slices.Contains(tags, pending.Tag) {

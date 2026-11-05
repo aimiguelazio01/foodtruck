@@ -1,3 +1,6 @@
+import { pbkdf2Async } from '@noble/hashes/pbkdf2.js';
+import { sha256 } from '@noble/hashes/sha2.js';
+
 const encoder = new TextEncoder();
 const iterations = 600_000;
 const algorithm = 'pbkdf2-sha256';
@@ -6,7 +9,13 @@ const fromHex = value => Uint8Array.from(value.match(/../g), pair => Number.pars
 
 async function derive(password, salt) {
   const key = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits']);
-  return crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', iterations, salt }, key, 256);
+  try {
+    return await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', iterations, salt }, key, 256);
+  } catch (error) {
+    // Production Workers can enforce a lower cap than local workerd.
+    if (error?.name !== 'NotSupportedError' || !/iteration.*(?:100000|100,000|not supported|limit)/i.test(error.message)) throw error;
+    return pbkdf2Async(sha256, encoder.encode(password), salt, { c: iterations, dkLen: 32 });
+  }
 }
 
 export async function hashPassword(password) {

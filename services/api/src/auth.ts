@@ -2,19 +2,15 @@ import {createHash,randomBytes,scryptSync,timingSafeEqual} from "node:crypto";
 import type {FastifyRequest} from "fastify";
 import {pool} from "./db.js";
 import {isAllowed} from "../../../packages/backend/auth/capability.js";
+import {accessFor as sharedAccessFor,type Capability} from "../../../packages/backend/auth/access.js";
+import {db} from "./db-port.js";
 export const digest=(value:string)=>createHash("sha256").update(value).digest("hex");
 declare module "fastify" { interface FastifyRequest { user: {id:string,email:string}|null } }
 export async function authenticate(req:FastifyRequest){req.user=null;const token=req.headers.authorization?.match(/^Bearer ([a-f0-9]{64})$/)?.[1]||req.headers.cookie?.match(/(?:^|;\s*)staff_session=([a-f0-9]{64})(?:;|$)/)?.[1];if(token){const result=await pool.query("SELECT u.id,u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.hash=$1 AND s.expires>$2",[digest(token),Date.now()]);req.user=result.rows[0]||null;}}
-export const capabilities=['menus','inventory','orders','calendar','branding','customers','reports','tasks','schedule'] as const;
-export type Capability=typeof capabilities[number];
-export function defaultPermissions(role:string):Record<Capability,boolean>{return Object.fromEntries(capabilities.map(k=>[k,role==='staff'?['menus','orders','tasks','schedule'].includes(k):role==='manager'?k!=='branding':true])) as Record<Capability,boolean>;}
-export async function accessFor(userId:string,businessId:string){
- const r=await pool.query("SELECT role FROM (SELECT 'owner' AS role,0 AS priority FROM organization_members om JOIN organization_trucks ot ON ot.organization_id=om.organization_id WHERE om.user_id=$1 AND ot.business_id=$2 AND om.role IN ('network_owner','network_admin') UNION ALL SELECT m.role,1 AS priority FROM memberships m WHERE m.user_id=$1 AND m.business_id=$2) access_rows ORDER BY priority LIMIT 1",[userId,businessId]);
- const role=r.rows[0]?.role;if(!role)return null;const isAdmin=['owner','truck_admin'].includes(role);
- const custom=(await pool.query('SELECT permissions FROM membership_permissions WHERE user_id=$1 AND business_id=$2',[userId,businessId])).rows[0]?.permissions;
- // Existing staff can view menus; editing becomes available only through an explicit grant.
- return {role,isAdmin,permissions:isAdmin?defaultPermissions('owner'):custom?Object.fromEntries(capabilities.map(k=>[k,custom[k]===true])):defaultPermissions(role),custom:!!custom};
-}
+// Role and permission rules are shared with the Cloudflare Worker (packages/backend/auth).
+export {capabilities,defaultPermissions} from "../../../packages/backend/auth/access.js";
+export type {Capability} from "../../../packages/backend/auth/access.js";
+export async function accessFor(userId:string,businessId:string){return sharedAccessFor(db,userId,businessId);}
 function requiredCapability(req:FastifyRequest):Capability|'admin'|'images'|null{
  const path=req.url.split('?')[0],b=(req.body||{}) as any;
  if(path.includes('/tasks'))return 'tasks';

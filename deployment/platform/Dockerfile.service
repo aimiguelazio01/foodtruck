@@ -1,0 +1,15 @@
+FROM golang:1.24 AS build
+WORKDIR /src
+COPY desktop/launcher/go.mod desktop/launcher/go.sum ./
+RUN go mod download
+COPY desktop/launcher/cloudflare ./cloudflare
+COPY desktop/launcher/platform ./platform
+COPY desktop/launcher/cmd/platform ./cmd/platform
+RUN CGO_ENABLED=0 go build -buildvcs=false -o /platform ./cmd/platform
+RUN mkdir /data
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=build /platform /platform
+COPY --from=build --chown=65532:65532 /data /data
+WORKDIR /data
+EXPOSE 4100
+ENTRYPOINT ["/platform"]

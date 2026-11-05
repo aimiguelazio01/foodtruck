@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"foodtruck.local/desktop/cloudflare"
 	"os"
+	"path/filepath"
 )
 
 func writeNew(path string, data []byte) error {
@@ -43,25 +44,33 @@ func generate(privatePath, publicPath string) error {
 	return writeNew(publicPath, []byte(base64.RawURLEncoding.EncodeToString(public)+"\n"))
 }
 
+func readPrivateKey(privatePath string) (ed25519.PrivateKey, error) {
+	data, err := os.ReadFile(privatePath)
+	if err != nil {
+		return nil, err
+	}
+	block, _ := pem.Decode(data)
+	if block == nil || block.Type != "PRIVATE KEY" {
+		return nil, errors.New("chave privada inválida")
+	}
+	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	private, ok := key.(ed25519.PrivateKey)
+	if !ok {
+		return nil, errors.New("a chave deve ser Ed25519")
+	}
+	return private, nil
+}
+
 func issue(privatePath, account, order, output string) error {
 	if order == "" || len(order) > 250 {
 		return errors.New("indique o identificador da compra")
 	}
-	data, err := os.ReadFile(privatePath)
+	private, err := readPrivateKey(privatePath)
 	if err != nil {
 		return err
-	}
-	block, _ := pem.Decode(data)
-	if block == nil || block.Type != "PRIVATE KEY" {
-		return errors.New("chave privada inválida")
-	}
-	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-	if err != nil {
-		return err
-	}
-	private, ok := key.(ed25519.PrivateKey)
-	if !ok {
-		return errors.New("a chave deve ser Ed25519")
 	}
 	claims := cloudflare.License{Version: 1, Product: "food-truck-live", Account: account, OrderID: order}
 	payload, err := json.Marshal(claims)
@@ -79,8 +88,25 @@ func issue(privatePath, account, order, output string) error {
 	return writeNew(output, append(document, '\n'))
 }
 
+func signPackage(privatePath, directory string) error {
+	if _, err := cloudflare.VerifyDeploymentPackage(directory); err != nil {
+		return err
+	}
+	private, err := readPrivateKey(privatePath)
+	if err != nil {
+		return err
+	}
+	manifest, err := os.ReadFile(filepath.Join(directory, "manifest.json"))
+	if err != nil {
+		return err
+	}
+	signature := ed25519.Sign(private, cloudflare.DeploymentSigningMessage(manifest))
+	return writeNew(filepath.Join(directory, "manifest.signature"), []byte(base64.RawURLEncoding.EncodeToString(signature)+"\n"))
+}
+
 func main() {
-	mode := flag.String("mode", "", "generate ou issue")
+	mode := flag.String("mode", "", "generate, issue ou sign-package")
+	packageDir := flag.String("package", "", "pasta do pacote a assinar")
 	private := flag.String("private-key", "", "ficheiro privado PKCS8 PEM, exclusivo do vendedor")
 	public := flag.String("public-key", "", "ficheiro público base64url para a distribuição")
 	account := flag.String("account", "", "identificador da conta Cloudflare do comprador")
@@ -93,8 +119,10 @@ func main() {
 		err = generate(*private, *public)
 	case "issue":
 		err = issue(*private, *account, *order, *output)
+	case "sign-package":
+		err = signPackage(*private, *packageDir)
 	default:
-		err = errors.New("escolha -mode generate ou -mode issue")
+		err = errors.New("escolha -mode generate, issue ou sign-package")
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)

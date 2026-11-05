@@ -1,5 +1,7 @@
 # Publicação gratuita atualmente configurada
 
+> **Percurso alternativo.** A oferta principal é o alojamento gerido na Cloudflare, configurado pelo portal de instalação (ver [deployment/platform/README.md](../deployment/platform/README.md)). Este documento descreve a publicação gratuita em Vercel + Supabase e mantém-se para instalações próprias ou avançadas; não é necessário para clientes do alojamento gerido.
+
 - Clientes: https://foodtruck-swart.vercel.app (`apps/customer`).
 - Gestão: https://foodtruck-management.vercel.app (`apps/management`).
 - API: https://foodtruck-api.vercel.app (`services/api`).

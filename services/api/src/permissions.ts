@@ -1,12 +1,19 @@
 import type {FastifyInstance} from 'fastify';
-import {randomUUID,randomBytes,scryptSync} from 'node:crypto';
-import {pool} from './db.js';
-import {accessFor,capabilities,requireAdministrator} from './auth.js';
-import {notify} from './orders.js';
-const fail=(message:string,statusCode=400):never=>{throw Object.assign(new Error(message),{statusCode});};
-function grants(value:any){if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!capabilities.includes(k as any)||typeof value[k]!=='boolean'))fail('Permissões inválidas.');return Object.fromEntries(capabilities.map(k=>[k,value[k]===true]));}
+import {randomBytes,scryptSync} from 'node:crypto';
+import {requireAdministrator} from './auth.js';
+import {db} from './db-port.js';
+import {createUser,listUsers,updatePermissions} from '../../../packages/backend/services/users.js';
+
+// Business rules live in packages/backend/services/users.ts and are shared with the Cloudflare Worker.
+const hashPassword=async(password:string)=>{const salt=randomBytes(16).toString('hex');return salt+':'+scryptSync(password,salt,64).toString('hex');};
 export async function permissionRoutes(app:FastifyInstance){
- app.get('/api/v1/manage/businesses/:id/users',async req=>{const {id}=req.params as any;await requireAdministrator(req,id);const users=(await pool.query('SELECT u.id,u.email,m.role FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.business_id=$1 ORDER BY u.email',[id])).rows;return {capabilities,users:await Promise.all(users.map(async u=>({...u,...await accessFor(u.id,id)})))};});
- app.post('/api/v1/manage/businesses/:id/users',async req=>{const {id}=req.params as any;await requireAdministrator(req,id);const b=req.body as any;const email=typeof b?.email==='string'?b.email.trim().toLowerCase():'';if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)||email.length>254||typeof b.password!=='string'||b.password.length<12||b.password.length>256||!['manager','staff'].includes(b.role))fail('Preencha email, função e palavra-passe com pelo menos 12 caracteres.');const permissions=grants(b.permissions),uid=randomUUID(),salt=randomBytes(16).toString('hex'),c=await pool.connect();try{await c.query('BEGIN');await c.query('INSERT INTO users VALUES($1,$2,$3)',[uid,email,salt+':'+scryptSync(b.password,salt,64).toString('hex')]);await c.query('INSERT INTO memberships VALUES($1,$2,$3)',[uid,id,b.role]);await c.query('INSERT INTO membership_permissions VALUES($1,$2,$3)',[uid,id,JSON.stringify(permissions)]);await c.query('INSERT INTO audit_events VALUES($1,$2,$3,$4,$5)',[randomUUID(),id,req.user!.id,'user:create:'+uid,Date.now()]);await notify(c,id);await c.query('COMMIT');return {id:uid};}catch(e:any){await c.query('ROLLBACK');if(e.code==='23505')fail('Este email já existe. Associe o utilizador existente à carrinha na Rede.',409);throw e;}finally{c.release();}});
- app.patch('/api/v1/manage/businesses/:id/users/:userId/permissions',async req=>{const {id,userId}=req.params as any;await requireAdministrator(req,id);const permissions=grants((req.body as any)?.permissions),c=await pool.connect();try{await c.query('BEGIN');const target=await c.query('SELECT role FROM memberships WHERE user_id=$1 AND business_id=$2 FOR UPDATE',[userId,id]);if(!target.rowCount)fail('Utilizador não encontrado.',404);const a=await accessFor(userId,id);if(a?.isAdmin)fail('O administrador mantém controlo total.',403);await c.query('INSERT INTO membership_permissions VALUES($1,$2,$3) ON CONFLICT(user_id,business_id) DO UPDATE SET permissions=EXCLUDED.permissions',[userId,id,JSON.stringify(permissions)]);await c.query('INSERT INTO audit_events VALUES($1,$2,$3,$4,$5)',[randomUUID(),id,req.user!.id,'permissions:update:'+userId,Date.now()]);await notify(c,id);await c.query('COMMIT');return {ok:true};}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}});
+ app.get('/api/v1/manage/businesses/:id/users',async req=>{const {id}=req.params as any;await requireAdministrator(req,id);return listUsers(db,id);});
+ app.post('/api/v1/manage/businesses/:id/users',async req=>{
+  const {id}=req.params as any;await requireAdministrator(req,id);
+  return createUser(db,{businessId:id,body:(req.body||{}) as any,actorId:req.user!.id,hashPassword});
+ });
+ app.patch('/api/v1/manage/businesses/:id/users/:userId/permissions',async req=>{
+  const {id,userId}=req.params as any;await requireAdministrator(req,id);
+  return updatePermissions(db,{businessId:id,userId,body:(req.body||{}) as any,actorId:req.user!.id});
+ });
 }

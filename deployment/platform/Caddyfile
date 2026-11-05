@@ -1,0 +1,29 @@
+{
+    admin off
+}
+
+instalar.migfoodtruck.pt {
+    # Do not retain OAuth query codes, bearer tokens or cookies in request logs.
+    log {
+        output stdout
+        format filter {
+            wrap json
+            fields {
+                request>uri delete
+                request>headers delete
+            }
+        }
+    }
+    header {
+        -Server
+        Referrer-Policy no-referrer
+        X-Content-Type-Options nosniff
+    }
+    # Stripe calls the platform service directly: the request body must reach it unchanged for signature checks.
+    handle /stripe/webhook {
+        reverse_proxy service:4100
+    }
+    handle {
+        reverse_proxy portal:4200
+    }
+}

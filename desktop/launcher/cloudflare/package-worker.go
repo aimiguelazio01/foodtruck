@@ -28,6 +28,11 @@ func LoadPackageWorker(directory, role string) (PackageWorker, error) {
 	if err != nil {
 		return payload, err
 	}
+	return loadPackageWorker(directory, role, manifest)
+}
+
+func loadPackageWorker(directory, role string, manifest *DeploymentPackage) (PackageWorker, error) {
+	var payload PackageWorker
 	root, err := os.OpenRoot(directory)
 	if err != nil {
 		return payload, err

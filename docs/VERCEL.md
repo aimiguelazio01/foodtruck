@@ -21,3 +21,6 @@ Mudar INTERNAL_API_URL exige nova compilação/publicação dos sites. Mudar var
 O erro NEXT_NO_ROUTES_MANIFEST exige conferir a raiz, preset, output e logs do build da publicação em causa. Uma publicação antiga falhada continua a mostrar o erro depois de uma nova publicação ficar Ready.
 
 Vercel Hobby tem condição de uso pessoal/não comercial. Consulte os preços e limites oficiais antes de usar profissionalmente. Os percursos Docker, Cloudflare e PostgreSQL alternativo estão explicados no novo manual.
+
+> **Percurso alternativo.** A oferta principal é o alojamento gerido na Cloudflare, configurado pelo portal de instalação (ver [deployment/platform/README.md](../deployment/platform/README.md)). Este documento descreve a publicação em Vercel com PostgreSQL e mantém-se para instalações próprias ou avançadas; não é necessário para clientes do alojamento gerido.
+

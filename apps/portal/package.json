@@ -1,0 +1,1 @@
+{"name":"@foodtruck/portal","private":true,"scripts":{"dev":"next dev -p 4200","build":"next build","start":"next start -p 4200"},"dependencies":{"next":"16.4.3","react":"19.2.8","react-dom":"19.2.8"}}

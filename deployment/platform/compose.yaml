@@ -1,0 +1,60 @@
+services:
+  https:
+    image: caddy:2
+    profiles: [public]
+    depends_on:
+      - portal
+      - service
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - certificates:/data
+      - caddy_config:/config
+    restart: unless-stopped
+  database:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: platform
+      POSTGRES_USER: platform
+      POSTGRES_PASSWORD: ${PLATFORM_DB_PASSWORD:?Set a database password}
+    volumes:
+      - database:/var/lib/postgresql
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U platform -d platform"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+  service:
+    build:
+      context: ../..
+      dockerfile: deployment/platform/Dockerfile.service
+    depends_on:
+      database:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      PLATFORM_DATABASE_URL: postgresql://platform:${PLATFORM_DB_PASSWORD}@database:5432/platform
+      PLATFORM_LISTEN: 0.0.0.0:4100
+      PLATFORM_JOURNAL_DIRECTORY: /data/journals
+      PLATFORM_PACKAGE_DIRECTORY: /package
+    volumes:
+      - journals:/data
+      - ${PLATFORM_PACKAGE_HOST_PATH:?Set the signed package directory}:/package:ro
+    restart: unless-stopped
+  portal:
+    build:
+      context: ../..
+      dockerfile: deployment/platform/Dockerfile.portal
+    environment:
+      PLATFORM_INTERNAL_URL: http://service:4100
+      PLATFORM_ORIGIN: ${PLATFORM_ORIGIN:?Set the public origin}
+    ports:
+      - 127.0.0.1:4200:4200
+    restart: unless-stopped
+volumes:
+  certificates:
+  caddy_config:
+  database:
+  journals:

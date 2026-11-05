@@ -1,0 +1,80 @@
+name: Platform and Cloudflare tests
+
+# Covers the managed-hosting product: Worker API, installer engine, platform service and portal.
+# The desktop installer has its own workflow (cloud-installer.yml).
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+  pull_request:
+    paths:
+      - apps/portal/**
+      - apps/customer/**
+      - apps/management/**
+      - deployment/**
+      - desktop/launcher/**
+      - packages/backend/**
+      - services/api/**
+      - scripts/**
+      - package.json
+      - package-lock.json
+      - .github/workflows/platform.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  worker:
+    name: Cloudflare Worker (workerd) and shared services
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --include=dev
+      - name: Worker API tests
+        run: npm run cloudflare:test
+      - name: Shared services on PostgreSQL
+        run: npm run test:shared
+
+  platform:
+    name: Go engine and platform service
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: desktop/launcher/go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --include=dev
+      - name: Cloudflare engine, installer and license tool
+        run: go -C desktop/launcher test ./cloudflare/... ./cmd/...
+      - name: Platform service on a disposable PostgreSQL
+        # Starts the same throwaway embedded PostgreSQL used locally and runs the platform tests against it.
+        run: node scripts/with-test-postgres.mjs scripts/test-platform.mjs
+      - name: Vet
+        run: go -C desktop/launcher vet ./cloudflare ./platform ./cmd/platform
+
+  portal:
+    name: Portal build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --include=dev
+      - run: npm run build --workspace=@foodtruck/portal

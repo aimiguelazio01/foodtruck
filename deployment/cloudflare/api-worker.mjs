@@ -1,3 +1,5 @@
+import { backupMedia } from './backup-media.mjs';
+import { hostingAccess } from './subscription.mjs';
 import { handleInstallation, readBoundedJSON } from './installation-worker.mjs';
 import { verifyPassword } from './passwords.mjs';
 import { readOrganizations, readPublicRoute } from './read-routes.mjs';
@@ -12,6 +14,7 @@ import { mediaPath, readMedia, saveImage } from './media.mjs';
 import { clientRateIdentity, takeRequestSlot } from './rate-limits.mjs';
 import { json, sessionToken, sessionUser, sha256 as hash } from './http.mjs';
 import { handleSharedRoute } from './shared-routes.mjs';
+import { handleAccountRoute } from './account-routes.mjs';
 import { HttpError } from '../../packages/backend/db/port.js';
 
 const rateWindow = 900_000;
@@ -55,10 +58,15 @@ async function logout(request, env) {
 
 export default {
   async scheduled(event, env) {
+    if (await hostingAccess(env)) return;
     await runMaintenance(env.DB, event.scheduledTime);
   },
   async fetch(request, env) {
     try {
+      const mediaBackup = await backupMedia(request,env);
+      if(mediaBackup)return mediaBackup;
+      const hosting = await hostingAccess(env);
+      if (hosting) return hosting;
       const path = new URL(request.url).pathname;
       const shared = await handleSharedRoute(request, env);
       if (shared) return shared;
@@ -112,7 +120,7 @@ export default {
         return result.status === 200 ? json({ ok: true }) : json({ message: result.message }, result.status);
       }
       if (request.method === 'GET') {
-        const resource = /^\/api\/v1\/manage\/businesses\/([a-zA-Z0-9-]{1,100})\/(products|events|settings)$/.exec(path);
+        const resource = /^\/api\/v1\/manage\/businesses\/([a-zA-Z0-9-]{1,100})\/(products|settings)$/.exec(path);
         if (resource || path === '/api/v1/manage/businesses' || path === '/api/v1/manage/customer-app') {
           const user = await sessionUser(request, env.DB);
           if (!user) return json({ message: 'Autenticação necessária.' }, 401);
@@ -168,6 +176,8 @@ export default {
         if (!await takeRequestSlot(env.DB, 'staff-login', await clientRateIdentity(request), 25, rateWindow)) return throttled();
         return await login(request, env);
       }
+      const account = await handleAccountRoute(request, env);
+      if (account) return account;
       return await handleInstallation(request, env) ?? json({ message: 'Página não encontrada.' }, 404);
     } catch (error) {
       if (error instanceof HttpError) return json({ message: error.message }, error.statusCode);

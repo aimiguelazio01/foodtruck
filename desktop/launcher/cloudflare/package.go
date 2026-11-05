@@ -1,7 +1,9 @@
 package cloudflare
 
 import (
+	"crypto/ed25519"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -13,10 +15,11 @@ import (
 )
 
 type DeploymentPackage struct {
-	Format      int    `json:"format"`
-	Application string `json:"application"`
-	Version     string `json:"version"`
-	Status      string `json:"status"`
+	Schema      DatabaseSchema `json:"schema"`
+	Format      int            `json:"format"`
+	Application string         `json:"application"`
+	Version     string         `json:"version"`
+	Status      string         `json:"status"`
 	Workers     map[string]struct {
 		Entry      string `json:"entry"`
 		Assets     string `json:"assets"`
@@ -32,6 +35,17 @@ type DeploymentPackage struct {
 // VerifyDeploymentPackage checks inventory and integrity. Trust in the manifest
 // itself must come from the signed installer or an independently verified signature.
 func VerifyDeploymentPackage(directory string) (*DeploymentPackage, error) {
+	return verifyDeploymentPackage(directory, nil)
+}
+
+func VerifySignedDeploymentPackage(directory string, key ed25519.PublicKey) (*DeploymentPackage, error) {
+	if len(key) != ed25519.PublicKeySize {
+		return nil, errors.New("Missing vendor public key")
+	}
+	return verifyDeploymentPackage(directory, key)
+}
+
+func verifyDeploymentPackage(directory string, key ed25519.PublicKey) (*DeploymentPackage, error) {
 	root, err := os.OpenRoot(directory)
 	if err != nil {
 		return nil, err
@@ -47,6 +61,21 @@ func VerifyDeploymentPackage(directory string) (*DeploymentPackage, error) {
 		return nil, err
 	}
 	var result DeploymentPackage
+	if key != nil {
+		file, err := root.Open("manifest.signature")
+		if err != nil {
+			return nil, errors.New("Signed deployment manifest is missing")
+		}
+		encoded, err := io.ReadAll(io.LimitReader(file, 129))
+		file.Close()
+		if err != nil {
+			return nil, err
+		}
+		signature, err := base64.RawURLEncoding.Strict().DecodeString(strings.TrimSpace(string(encoded)))
+		if len(encoded) > 128 || err != nil || !ed25519.Verify(key, DeploymentSigningMessage(data), signature) {
+			return nil, errors.New("Invalid deployment manifest signature")
+		}
+	}
 	if len(data) > 4<<20 || json.Unmarshal(data, &result) != nil || result.Format != 1 ||
 		result.Application != licenseApplication || result.Version == "" || len(result.Files) == 0 {
 		return nil, errors.New("Invalid Food Truck Live deployment manifest")
@@ -80,7 +109,7 @@ func VerifyDeploymentPackage(directory string) (*DeploymentPackage, error) {
 		if err != nil {
 			return err
 		}
-		if entry.IsDir() || name == "manifest.json" {
+		if entry.IsDir() || name == "manifest.json" || name == "manifest.signature" {
 			return nil
 		}
 		expected, listed := result.Files[name]
@@ -110,4 +139,8 @@ func VerifyDeploymentPackage(directory string) (*DeploymentPackage, error) {
 		return nil, errors.New("Deployment package is missing files")
 	}
 	return &result, nil
+}
+
+func DeploymentSigningMessage(manifest []byte) []byte {
+	return append([]byte("foodtruck-deployment-v1\n"), manifest...)
 }

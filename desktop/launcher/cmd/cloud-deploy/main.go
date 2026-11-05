@@ -20,6 +20,10 @@ type request struct {
 	PackageDirectory string          `json:"packageDirectory"`
 	Account          string          `json:"account"`
 	License          json.RawMessage `json:"license"`
+	JournalDirectory string          `json:"journalDirectory"`
+	Business         json.RawMessage `json:"business"`
+	CostsApproved    bool            `json:"costsApproved"`
+	ImagesApproved   bool            `json:"imagesApproved"`
 }
 
 // Supplied at release build time. Distribution never includes the private key.
@@ -37,12 +41,20 @@ func execute(ctx context.Context, input request) (any, error) {
 			return nil, errors.New("Escolha o pacote da aplicação.")
 		}
 		return cloudflare.VerifyDeploymentPackage(input.PackageDirectory)
-	case "verify-license":
+	case "verify-license", "install":
 		public, err := base64.RawURLEncoding.Strict().DecodeString(vendorPublicKey)
 		if err != nil || len(public) != ed25519.PublicKeySize {
 			return nil, errors.New("A chave pública de distribuição ainda não foi configurada.")
 		}
-		return cloudflare.VerifyLicense(input.License, ed25519.PublicKey(public), input.Account)
+		if input.Action == "verify-license" {
+			return cloudflare.VerifyLicense(input.License, ed25519.PublicKey(public), input.Account)
+		}
+		if len(input.Token) < 20 || len(input.Token) > 512 || input.JournalDirectory == "" {
+			return nil, errors.New("Dados de instalação inválidos.")
+		}
+		return cloudflare.New(input.Token).InstallApplication(ctx, input.JournalDirectory, input.PackageDirectory,
+			input.Account, cloudflare.InstallOptions{Business: input.Business, License: input.License,
+				PublicKey: ed25519.PublicKey(public), CostsApproved: input.CostsApproved, ImagesApproved: input.ImagesApproved})
 	default:
 		return nil, errors.New("Operação indisponível.")
 	}
@@ -60,7 +72,11 @@ func run(input io.Reader, output io.Writer) error {
 	if len(line) > 65536 || json.Unmarshal(line, &message) != nil {
 		response["error"] = "Pedido de instalação inválido."
 	} else {
-		ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+		timeout := 90 * time.Second
+		if message.Action == "install" {
+			timeout = 10 * time.Minute
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 		result, err := execute(ctx, message)
 		if err != nil {

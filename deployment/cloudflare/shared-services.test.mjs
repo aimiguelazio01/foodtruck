@@ -4,10 +4,12 @@ import { loadD1Migrations } from './d1-schema.mjs';
 import { applyD1Migrations } from './d1-migrate.mjs';
 import { d1Db } from './d1-port.mjs';
 import { inventoryScenarios } from '../../packages/backend/tests/inventory.scenarios.js';
+import { catalogScenarios } from '../../packages/backend/tests/catalog.scenarios.js';
+import { peopleScenarios } from '../../packages/backend/tests/people.scenarios.js';
 
 // Runs the shared service scenarios on a real workerd D1 (not the synchronous node:sqlite stand-in),
 // so the parallel scenarios exercise genuinely interleaved batches.
-const scenarioSets = [['inventory', inventoryScenarios]];
+const scenarioSets = [['inventory', inventoryScenarios], ['catalog', catalogScenarios], ['people', peopleScenarios]];
 let runtime;
 let db;
 

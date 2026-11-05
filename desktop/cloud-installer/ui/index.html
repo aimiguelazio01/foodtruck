@@ -4,6 +4,19 @@
 <main><p class="eyebrow">PREPARAR A APLICAÇÃO</p><h1>Vamos pôr o seu<br>negócio em movimento.</h1><p class="intro">Confirme o pacote da aplicação e ligue a conta Cloudflare onde será alojado o seu negócio.</p>
 <section><h2>1. Verificar o pacote</h2><form id="package"><label for="directory">Pasta do pacote Food Truck Live</label><input id="directory" required autocomplete="off" placeholder="Caminho da pasta com manifest.json"><button>Verificar ficheiros</button></form><p id="package-result" role="status"></p></section>
 <section><h2>2. Ligar à Cloudflare</h2><p>Utilize um token API da sua conta com as permissões indicadas na documentação de instalação.</p><form id="connect"><label for="token">Token API Cloudflare</label><input id="token" type="password" required minlength="20" maxlength="512" autocomplete="off" spellcheck="false"><button>Consultar contas</button></form><label for="accounts">Conta de alojamento</label><select id="accounts" disabled><option>Ligue a conta para continuar</option></select><p id="connection-result" role="status"></p></section>
-<p class="notice">A publicação completa está em integração. Esta versão permite verificar o pacote e consultar as contas autorizadas. A configuração do negócio e a publicação serão disponibilizadas após validação do percurso completo.</p>
 <section><h2>3. Verificar a licença</h2><p>Escolha a conta acima e carregue a licença assinada recebida com a compra.</p><form id="license"><label for="license-file">Ficheiro de licença</label><input id="license-file" type="file" accept=".json,application/json" required><button>Verificar licença</button></form><p id="license-result" role="status"></p></section>
+<section><h2>4. Configurar e publicar</h2><p>O assistente cria os recursos na conta selecionada e usa os endereços workers.dev da Cloudflare.</p>
+<form id="install"><fieldset id="install-fields" disabled>
+<label for="business-name">Nome do negócio</label><input id="business-name" name="name" required maxlength="100" autocomplete="organization">
+<label for="business-address">Morada (opcional)</label><input id="business-address" name="address" maxlength="300" autocomplete="street-address">
+<label for="business-phone">Telefone (opcional)</label><input id="business-phone" name="phone" type="tel" maxlength="50" autocomplete="tel">
+<label for="contact-email">Email de contacto (opcional)</label><input id="contact-email" name="contactEmail" type="email" maxlength="254">
+<div class="colors"><label>Cor principal <input name="primaryColor" type="color" value="#ed8735"></label><label>Cor secundária <input name="secondaryColor" type="color" value="#20271f"></label></div>
+<label for="admin-email">Email do administrador</label><input id="admin-email" name="email" type="email" maxlength="254" autocomplete="username" required>
+<label for="admin-password">Palavra-passe do administrador</label><input id="admin-password" name="password" type="password" minlength="12" maxlength="256" autocomplete="new-password" required>
+<label for="deploy-token">Token API Cloudflare usado na ligação</label><input id="deploy-token" type="password" minlength="20" maxlength="512" autocomplete="off" spellcheck="false" required>
+<label class="check"><input id="images-approved" type="checkbox"> Ativar processamento de imagens (pode ter custos adicionais).</label>
+<label class="check"><input id="costs-approved" type="checkbox" required> Autorizo a criação de Workers, D1 e R2 na minha conta e os custos aplicáveis.</label>
+<button>Publicar ou retomar</button></fieldset></form><p id="install-result" role="status"></p>
+<div id="addresses" hidden><label for="customer-url">Site de encomendas</label><input id="customer-url" readonly><label for="management-url">Site de gestão</label><input id="management-url" readonly></div></section>
 </main></body></html>

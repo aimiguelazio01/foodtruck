@@ -41,6 +41,7 @@
     "test:desktop:windows": "node desktop/test-native.mjs"
   },
   "dependencies": {
+    "@noble/hashes": "2.0.1",
     "leaflet": "1.9.4",
     "next": "16.4.3",
     "qrcode": "1.5.4",

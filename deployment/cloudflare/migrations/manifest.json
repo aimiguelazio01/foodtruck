@@ -90,5 +90,9 @@
   {
     "name": "022_write_guard",
     "sha256": "c8c69fd2c8eb675699c98f613bd56631c7b4661c19cdb5e78d3ee5064e73b6f7"
+  },
+  {
+    "name": "023_hosting_status",
+    "sha256": "9057e228c68aee2c0575b8b4ca9d77ff0a2697a9b3690ad215a974e0ed78fe1b"
   }
 ]

@@ -65,3 +65,51 @@ func TestPublishNewWorkerRecoversLostResponse(t *testing.T) {
 		t.Fatal("foreign Worker was accepted")
 	}
 }
+
+func TestTemporaryWorkerRepairPreservesOwnershipAndRetries(t *testing.T) {
+	state, _ := NewProvisionState(strings.Repeat("a", 32))
+	state.DatabaseID, state.BucketName = "database", state.Name
+	state.Workers = map[string]string{"bootstrap": "owned-tag"}
+	state.WorkerDigests = map[string]string{"bootstrap": "old-digest"}
+	client := New("token")
+	writes := 0
+	foreign := false
+	client.http.Transport = transport(func(req *http.Request) (*http.Response, error) {
+		if req.Method == http.MethodPut {
+			writes++
+			if state.WorkerPending == nil {
+				t.Fatal("missing update intent")
+			}
+			if writes == 1 {
+				return nil, errors.New("lost response")
+			}
+			return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"success":true,"result":{}}`))}, nil
+		}
+		tag := "owned-tag"
+		if foreign {
+			tag = "foreign"
+		}
+		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(fmt.Sprintf(`{"success":true,"result":{"tags":[%q]}}`, tag)))}, nil
+	})
+	call := func() error {
+		_, err := client.PublishNewWorker(context.Background(), state, "bootstrap", []byte(`{"main_module":"setup.mjs"}`),
+			[]WorkerModule{{Name: "setup.mjs", Content: []byte("export default {}")}}, nil, func(next ProvisionState) error { state = next; return nil })
+		return err
+	}
+	if call() == nil || state.WorkerPending == nil {
+		t.Fatal("lost update not recorded")
+	}
+	if err := call(); err != nil {
+		t.Fatal(err)
+	}
+	if state.WorkerPending != nil || state.Workers["bootstrap"] != "owned-tag" || writes != 2 {
+		t.Fatal("repair did not converge")
+	}
+	if err := call(); err != nil || writes != 2 {
+		t.Fatal("repeat changed completed repair")
+	}
+	foreign = true
+	if call() == nil || writes != 2 {
+		t.Fatal("foreign worker accepted")
+	}
+}

@@ -1,5 +1,7 @@
 # Emails de confirmação e recuperação
 
+> **Percurso alternativo.** Este documento descreve o envio de email da API Node (Brevo ou SMTP), para instalações próprias ou avançadas. No alojamento gerido, configurado pelo portal de instalação (ver [deployment/platform/README.md](../deployment/platform/README.md)), o operador envia o email de contas e de recuperação com uma única conta Brevo da plataforma (`PLATFORM_BREVO_API_KEY`, `PLATFORM_MAIL_FROM`); o cliente não configura nada.
+
 A API suporta Brevo por HTTPS (`BREVO_API_KEY`) ou um servidor SMTP (`SMTP_URL`). O remetente é definido em `MAIL_FROM`. Não guardar as credenciais no Git nem em variáveis NEXT_PUBLIC_*.
 
 ## Brevo gratuito

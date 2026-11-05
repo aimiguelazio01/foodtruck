@@ -8,13 +8,40 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 func (c *Client) verifyApplication(ctx context.Context, addresses ApplicationAddresses) error {
+	return c.verifyApplicationAt(ctx, addresses, ".workers.dev")
+}
+
+// verifyWithRetry waits for a freshly attached hostname to start answering over HTTPS.
+func verifyWithRetry(ctx context.Context, wait bool, verify func() error) error {
+	attempts := 1
+	if wait {
+		attempts = domainVerifyAttempts
+	}
+	var err error
+	for i := 0; i < attempts; i++ {
+		if err = verify(); err == nil {
+			return nil
+		}
+		if i+1 < attempts {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(domainVerifyDelay):
+			}
+		}
+	}
+	return err
+}
+
+func (c *Client) verifyApplicationAt(ctx context.Context, addresses ApplicationAddresses, suffix string) error {
 	for _, address := range []string{addresses.Customer, addresses.Management} {
 		origin, err := url.Parse(address)
 		if err != nil || origin.Scheme != "https" || origin.User != nil || origin.Path != "" || origin.RawQuery != "" ||
-			!strings.HasSuffix(origin.Host, ".workers.dev") {
+			!strings.HasSuffix(origin.Host, suffix) {
 			return errors.New("Invalid application verification address")
 		}
 		request, err := http.NewRequestWithContext(ctx, http.MethodGet, address+"/api/v1/installation/status", nil)

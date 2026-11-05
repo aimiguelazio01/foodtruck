@@ -19,3 +19,6 @@ O Render Free suspende a API após 15 minutos sem tráfego. O primeiro acesso po
 Depois de a API responder em `/api/v1/health`, definir `INTERNAL_API_URL` nos projetos Vercel e voltar a publicar. Ver [VERCEL.md](VERCEL.md).
 
 Referências: https://render.com/docs/free e https://supabase.com/pricing
+
+> **Percurso alternativo.** A oferta principal é o alojamento gerido na Cloudflare, configurado pelo portal de instalação (ver [deployment/platform/README.md](../deployment/platform/README.md)). Este documento descreve a publicação em Render + Supabase e mantém-se para instalações próprias ou avançadas; não é necessário para clientes do alojamento gerido.
+

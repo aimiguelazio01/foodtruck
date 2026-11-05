@@ -1,7 +1,9 @@
 package cloudflare
 
 import (
+	"crypto/ed25519"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -43,6 +45,29 @@ func TestVerifyDeploymentPackage(t *testing.T) {
 	}
 	if payload, err := LoadPackageWorker(dir, "api"); err != nil || payload.Module.Name != "worker.mjs" {
 		t.Fatalf("API package failed to load: %+v %v", payload, err)
+	}
+	public, private, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := VerifySignedDeploymentPackage(dir, public); err == nil {
+		t.Fatal("unsigned package accepted")
+	}
+	signature := base64.RawURLEncoding.EncodeToString(ed25519.Sign(private, DeploymentSigningMessage(manifest)))
+	if err := os.WriteFile(filepath.Join(dir, "manifest.signature"), []byte(signature), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := VerifySignedDeploymentPackage(dir, public); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "manifest.json"), append(manifest, '\n'), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := VerifySignedDeploymentPackage(dir, public); err == nil {
+		t.Fatal("altered manifest accepted")
+	}
+	if err := os.WriteFile(filepath.Join(dir, "manifest.json"), manifest, 0600); err != nil {
+		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "api", "worker.mjs"), []byte("tampered"), 0600); err != nil {
 		t.Fatal(err)

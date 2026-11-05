@@ -1,5 +1,6 @@
 import { initializeD1Business, isD1Configured } from './d1-installation.mjs';
 import { hashPassword } from './passwords.mjs';
+import { setupError } from './setup-errors.mjs';
 
 const encoder = new TextEncoder();
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -70,13 +71,16 @@ export async function handleInstallation(request, env) {
   if (await isD1Configured(env.DB)) return conflict();
   const body = await readInput(request);
   if (!body) return json({ message: 'Verifique os dados de configuração.' }, 400);
+  let stage = 'password';
   try {
+    const passwordHash = await hashPassword(body.password);
+    stage = 'business-transaction';
     await initializeD1Business(env.DB, {
-      ...body, email: body.email.toLowerCase(), passwordHash: await hashPassword(body.password), logo: '', bootstrapID: env.BOOTSTRAP_ID ?? null,
+      ...body, email: body.email.toLowerCase(), passwordHash, logo: '', bootstrapID: env.BOOTSTRAP_ID ?? null,
     });
     return json({ ok: true }, 201);
   } catch {
     if (await isD1Configured(env.DB)) return conflict();
-    return json({ message: 'Não foi possível configurar o negócio. Tente novamente.' }, 503);
+    return setupError(stage, stage === 'password' ? 'PASSWORD_DERIVATION_FAILED' : 'BUSINESS_INITIALIZATION_FAILED');
   }
 }

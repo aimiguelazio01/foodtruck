@@ -2,12 +2,44 @@
 
 use std::io::{Read, Write};
 use std::process::{Command, Stdio};
+use tauri::Manager;
 
 #[tauri::command]
-async fn engine(request: serde_json::Value) -> Result<serde_json::Value, String> {
+async fn engine(
+    app: tauri::AppHandle,
+    mut request: serde_json::Value,
+) -> Result<serde_json::Value, String> {
     let action = request.get("action").and_then(|value| value.as_str());
-    if !matches!(action, Some("accounts" | "verify-package" | "verify-license")) {
+    if !matches!(
+        action,
+        Some("accounts" | "verify-package" | "verify-license" | "install")
+    ) {
         return Err("Operação indisponível.".into());
+    }
+    if action == Some("install") {
+        let account = request
+            .get("account")
+            .and_then(|value| value.as_str())
+            .ok_or("Conta inválida.")?;
+        if account.len() != 32
+            || !account
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        {
+            return Err("Conta inválida.".into());
+        }
+        let directory = app
+            .path()
+            .app_local_data_dir()
+            .map_err(|_| "Pasta da aplicação indisponível.")?
+            .join("deployments")
+            .join(account);
+        request["journalDirectory"] = serde_json::Value::String(
+            directory
+                .to_str()
+                .ok_or("Pasta da aplicação inválida.")?
+                .to_owned(),
+        );
     }
     let mut input = serde_json::to_vec(&request).map_err(|_| "Pedido inválido.")?;
     if input.len() > 65_535 {

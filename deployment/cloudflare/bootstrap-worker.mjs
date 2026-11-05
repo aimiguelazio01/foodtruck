@@ -1,4 +1,5 @@
 import migrations from 'foodtruck:migrations';
+import { setupError } from './setup-errors.mjs';
 import { applyD1Migrations } from './d1-migrate.mjs';
 import { handleInstallation, installationAuthorized } from './installation-worker.mjs';
 
@@ -23,7 +24,7 @@ export default {
       }
       return result;
     } catch {
-      return response('Não foi possível preparar a base de dados. Retome a instalação para tentar novamente.', 503);
+      return setupError('schema', 'SCHEMA_PREPARATION_FAILED');
     }
   },
 };

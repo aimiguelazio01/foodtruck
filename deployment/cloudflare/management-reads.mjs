@@ -30,7 +30,6 @@ export async function readManagedBusinesses(db, userID) {
 
 const resources = {
   products: ['menus', 'SELECT p.*,d.* FROM products p LEFT JOIN product_details d ON d.product_id=p.id WHERE p.business_id=? ORDER BY p.name,p.id'],
-  events: ['calendar', 'SELECT * FROM events WHERE business_id=? ORDER BY starts_at,id'],
   settings: ['branding', 'SELECT * FROM business_settings WHERE business_id=?'],
 };
 

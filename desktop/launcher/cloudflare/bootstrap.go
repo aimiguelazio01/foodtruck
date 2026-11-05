@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"regexp"
@@ -18,19 +19,23 @@ var installTokenPattern = regexp.MustCompile(`^[a-f0-9]{64}$`)
 // authenticated bridge. A server receipt permits safe recovery of a lost response.
 func (c *Client) BootstrapAndCleanupFromJournal(ctx context.Context, directory, account, token string, business json.RawMessage) (ProvisionState, error) {
 	return withJournal(directory, account, false, func(state ProvisionState, save func(ProvisionState) error) (ProvisionState, error) {
-		if !state.BootstrapCompleted {
-			if err := c.confirmBootstrap(ctx, state, token, business); err != nil {
-				return state, err
-			}
-			next := state
-			next.BootstrapCompleted = true
-			if err := save(next); err != nil {
-				return state, err
-			}
-			state = next
-		}
-		return c.cleanupBootstrap(ctx, state, save)
+		return c.bootstrapAndCleanup(ctx, state, token, business, save)
 	})
+}
+
+func (c *Client) bootstrapAndCleanup(ctx context.Context, state ProvisionState, token string, business json.RawMessage, save func(ProvisionState) error) (ProvisionState, error) {
+	if !state.BootstrapCompleted {
+		if err := c.confirmBootstrap(ctx, state, token, business); err != nil {
+			return state, err
+		}
+		next := state
+		next.BootstrapCompleted = true
+		if err := save(next); err != nil {
+			return state, err
+		}
+		state = next
+	}
+	return c.cleanupBootstrap(ctx, state, save)
 }
 
 func (c *Client) confirmBootstrap(ctx context.Context, state ProvisionState, token string, business json.RawMessage) error {
@@ -76,8 +81,21 @@ func (c *Client) confirmBootstrap(ctx context.Context, state ProvisionState, tok
 		OK           bool   `json:"ok"`
 		Installation string `json:"installation"`
 	}
-	if (response.StatusCode != 200 && response.StatusCode != 201) ||
-		json.NewDecoder(io.LimitReader(response.Body, 8192)).Decode(&receipt) != nil || !receipt.OK || receipt.Installation != state.Name {
+	if response.StatusCode != 200 && response.StatusCode != 201 {
+		var diagnostic struct {
+			Code      string `json:"code"`
+			Stage     string `json:"stage"`
+			RequestID string `json:"requestId"`
+		}
+		if json.NewDecoder(io.LimitReader(response.Body, 8192)).Decode(&diagnostic) == nil &&
+			regexp.MustCompile(`^[A-Z_]{1,64}$`).MatchString(diagnostic.Code) &&
+			regexp.MustCompile(`^[a-z-]{1,40}$`).MatchString(diagnostic.Stage) &&
+			regexp.MustCompile(`^[a-f0-9-]{36}$`).MatchString(diagnostic.RequestID) {
+			return fmt.Errorf("Bootstrap HTTP %d: %s (stage %s, reference %s)", response.StatusCode, diagnostic.Code, diagnostic.Stage, diagnostic.RequestID)
+		}
+		return fmt.Errorf("Bootstrap completion was not confirmed (HTTP %d). Resume installation after checking the setup Worker", response.StatusCode)
+	}
+	if json.NewDecoder(io.LimitReader(response.Body, 8192)).Decode(&receipt) != nil || !receipt.OK || receipt.Installation != state.Name {
 		return errors.New("Bootstrap completion could not be verified")
 	}
 	return nil

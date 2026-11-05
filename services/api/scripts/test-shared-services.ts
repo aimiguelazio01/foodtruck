@@ -11,7 +11,9 @@ const url=new URL(process.env.DATABASE_URL!);url.searchParams.set('options','-c 
 const {pool}=await import('../src/db.js');
 const {PgDb}=await import('../src/db-port.js');
 const {inventoryScenarios}=await import('../../../packages/backend/tests/inventory.scenarios.js');
-const sets:[string,{name:string;run:(db:any)=>Promise<void>}[]][]=[['inventory',inventoryScenarios]];
+const {catalogScenarios}=await import('../../../packages/backend/tests/catalog.scenarios.js');
+const {peopleScenarios}=await import('../../../packages/backend/tests/people.scenarios.js');
+const sets:[string,{name:string;run:(db:any)=>Promise<void>}[]][]=[['inventory',inventoryScenarios],['catalog',catalogScenarios],['people',peopleScenarios]];
 let failed=0;
 try{
  for(const name of (await readdir(new URL('../migrations/',import.meta.url))).filter(n=>n.endsWith('.sql')).sort())await pool.query(await readFile(new URL('../migrations/'+name,import.meta.url),'utf8'));
